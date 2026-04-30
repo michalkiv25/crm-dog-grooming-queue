@@ -1,38 +1,39 @@
-import { useState } from "react";
 import Login from "./components/Login/Login";
 import Register from "./components/Register/Register";
-import CreateAppointment from "./components/CreateAppointment/CreateAppointment";
-import MyAppointments from "./components/MyAppointments/MyAppointments";
 
 function App() {
-  const [page, setPage] = useState("login");
+  return (
+    <div className="container" style={styles.wrapper}>
 
-  const logout = () => {
-    localStorage.removeItem("token");
-    setPage("login");
-  };
+      {/* Login */}
+      <div style={styles.card}>
+        <Login />
+      </div>
 
-return (
-  <div className="container">
-    <h1>🐶 Dog Grooming Queue</h1>
+      {/* Register */}
+      <div style={styles.card}>
+        <Register />
+      </div>
 
-    <div className="nav">
-      <button onClick={() => setPage("login")}>Login</button>
-      <button onClick={() => setPage("register")}>Register</button>
-      <button onClick={() => setPage("dashboard")}>Dashboard</button>
-      <button onClick={() => setPage("Logout")}>Logout</button>
     </div>
-
-    {page === "login" && <Login />}
-    {page === "register" && <Register />}
-    {page === "dashboard" && (
-      <>
-        <CreateAppointment />
-        <MyAppointments />
-      </>
-    )}
-  </div>
-);
+  );
 }
 
 export default App;
+
+const styles = {
+  wrapper: {
+    display: "flex",
+    justifyContent: "center",
+    gap: "30px",
+    marginTop: "50px",
+    flexWrap: "wrap",
+  },
+  card: {
+    width: "300px",
+    padding: "20px",
+    border: "1px solid #ddd",
+    borderRadius: "10px",
+    background: "white",
+  },
+};

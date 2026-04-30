@@ -1,0 +1,42 @@
+.auth-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 30px;
+  margin-top: 50px;
+}
+
+.card {
+  width: 320px;
+  padding: 20px;
+  border-radius: 12px;
+  background: white;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.1);
+  text-align: center;
+  transition: 0.3s;
+}
+
+.card h2 {
+  margin-bottom: 15px;
+}
+
+.switch {
+  margin-top: 15px;
+  color: #007bff;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.switch:hover {
+  text-decoration: underline;
+}
+
+/* אפקט בחירה */
+.active {
+  transform: scale(1.05);
+  border: 2px solid #007bff;
+}
+
+.inactive {
+  opacity: 0.6;
+}
