@@ -20,7 +20,7 @@ return (
       <button onClick={() => setPage("login")}>Login</button>
       <button onClick={() => setPage("register")}>Register</button>
       <button onClick={() => setPage("dashboard")}>Dashboard</button>
-      <button onClick={logout}>Logout</button>
+      <button onClick={() => setPage("Logout")}>Logout</button>
     </div>
 
     {page === "login" && <Login />}

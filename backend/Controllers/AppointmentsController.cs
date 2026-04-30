@@ -42,24 +42,44 @@ namespace DogQueueApi.Controllers
   
 
 
-[Authorize]
-[HttpDelete("{id}")]
-public IActionResult Delete(int id)
-{
-    var username = User.Identity?.Name;
+        [Authorize]
+        [HttpDelete("{id}")]
+        public IActionResult Delete(int id)
+        {
+            var username = User.Identity?.Name;
 
-    var appointment = appointments.FirstOrDefault(a => a.Id == id);
+            var appointment = appointments.FirstOrDefault(a => a.Id == id);
 
-    if (appointment == null)
-        return NotFound("Appointment not found");
+            if (appointment == null)
+                return NotFound("Appointment not found");
 
-    // רק בעל התור יכול למחוק
-    if (appointment.Username != username)
-        return Forbid("You can only delete your own appointments");
+            // רק בעל התור יכול למחוק
+            if (appointment.Username != username)
+                return Forbid("You can only delete your own appointments");
 
-    appointments.Remove(appointment);
+            appointments.Remove(appointment);
 
-    return Ok(new { message = "Deleted successfully" });
-}
+            return Ok(new { message = "Deleted successfully" });
+        }
 
-}  }
+        [Authorize]
+        [HttpPut("{id}")]
+        public IActionResult Update(int id, Appointment updated)
+        {
+            var username = User.Identity?.Name;
+
+            var appointment = appointments.FirstOrDefault(a => a.Id == id);
+
+            if (appointment == null)
+                return NotFound("Appointment not found");
+
+            if (appointment.Username != username)
+                return Forbid("You can only edit your own appointments");
+
+            // עדכון שדות
+            appointment.DogName = updated.DogName;
+            appointment.Date = updated.Date;
+
+            return Ok(appointment);
+        }
+        }  }

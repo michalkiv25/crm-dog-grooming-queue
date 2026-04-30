@@ -14,7 +14,6 @@ namespace DogQueueApi.Controllers
         private static List<User> users = new List<User>();
         private static int nextId = 1;
 
-        // REGISTER
         [HttpPost("register")]
         public IActionResult Register(User user)
         {
@@ -32,40 +31,47 @@ namespace DogQueueApi.Controllers
 
             user.Id = nextId++;
             users.Add(user);
-Console.WriteLine("REGISTER USERS COUNT: " + users.Count);
+
+            Console.WriteLine("REGISTER USERS COUNT: " + users.Count);
+
             return Ok(new { message = "User registered successfully" });
         }
 
         [HttpPost("login")]
-public IActionResult Login(LoginDto loginUser)
-{
-    var user = users.FirstOrDefault(u =>
-        u.Username.Trim().ToLower() == loginUser.Username.Trim().ToLower() &&
-        u.Password == loginUser.Password);
+        public IActionResult Login([FromBody] LoginRequest loginUser)
+        {
+            var user = users.FirstOrDefault(u =>
+                u.Username == loginUser.Username &&
+                u.Password == loginUser.Password);
 
-    if (user == null)
-        return Unauthorized("Invalid username or password");
+            if (user == null)
+                return Unauthorized(new { message = "Invalid username or password" });
 
-    var claims = new[]
-    {
-        new Claim(ClaimTypes.Name, user.Username),
-        new Claim("FullName", user.FullName)
-    };
+            var tokenHandler = new JwtSecurityTokenHandler();
+            var key = Encoding.UTF8.GetBytes("THIS_IS_MY_SUPER_SECRET_KEY_12345");
 
-    var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes("THIS_IS_MY_SUPER_SECRET_KEY_12345"));
-    var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+            var tokenDescriptor = new SecurityTokenDescriptor
+            {
+                Subject = new ClaimsIdentity(new[]
+                {
+                    new Claim(ClaimTypes.Name, user.Username)
+                }),
+                Expires = DateTime.UtcNow.AddHours(1),
+                Issuer = "DogQueueApi",
+                Audience = "DogQueueApi",
+                SigningCredentials = new SigningCredentials(
+                    new SymmetricSecurityKey(key),
+                    SecurityAlgorithms.HmacSha256Signature)
+            };
 
-    var token = new JwtSecurityToken(
-        issuer: "DogQueueApi",
-        audience: "DogQueueApi",
-        claims: claims,
-        expires: DateTime.Now.AddHours(1),
-        signingCredentials: creds
-    );
+            var token = tokenHandler.CreateToken(tokenDescriptor);
 
-    return Ok(new
-    {
-        token = new JwtSecurityTokenHandler().WriteToken(token)
-    });
+            return Ok(new
+            {
+                message = "Login successful",
+                token = tokenHandler.WriteToken(token),
+                user
+            });
+        }
+    }
 }
-}}
