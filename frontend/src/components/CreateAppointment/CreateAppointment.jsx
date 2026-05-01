@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function CreateAppointment() {
+export default function CreateAppointment({ onSuccess }) {
   const [dogName, setDogName] = useState("");
   const [dogSize, setDogSize] = useState("");
   const [date, setDate] = useState("");
@@ -26,42 +26,46 @@ export default function CreateAppointment() {
       setDogName("");
       setDogSize("");
       setDate("");
+      onSuccess?.();
     } else {
       alert("Failed ❌");
     }
   };
 
   return (
-    <div style={{ border: "1px solid #ccc", padding: 20, marginTop: 20 }}>
+    <div className="auth-card">
       <h3>Create Appointment 🐶</h3>
 
-      <input
-        placeholder="Dog name"
-        value={dogName}
-        onChange={(e) => setDogName(e.target.value)}
-      />
+      <label>
+        Dog Name
+        <input
+          placeholder="Dog name"
+          value={dogName}
+          onChange={(e) => setDogName(e.target.value)}
+        />
+      </label>
 
-      <br /><br />
+      <label>
+        Dog Size
+        <select value={dogSize} onChange={(e) => setDogSize(e.target.value)}>
+          <option value="">Select dog size</option>
+          <option value="small">Small (30 min, ₪100)</option>
+          <option value="medium">Medium (45 min, ₪150)</option>
+          <option value="large">Large (60 min, ₪200)</option>
+        </select>
+      </label>
 
-      <select value={dogSize} onChange={(e) => setDogSize(e.target.value)}>
-        <option value="">Select dog size</option>
-        <option value="small">Small (30 min, ₪100)</option>
-        <option value="medium">Medium (45 min, ₪150)</option>
-        <option value="large">Large (60 min, ₪200)</option>
-      </select>
+      <label>
+        Appointment Date & Time
+        <input
+          type="datetime-local"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+        />
+      </label>
 
-      <br /><br />
-
-      <input
-        type="datetime-local"
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-      />
-
-      <br /><br />
-
-      <button onClick={createAppointment}>
-        Create
+      <button className="primary-button" onClick={createAppointment}>
+        Create Appointment
       </button>
     </div>
   );

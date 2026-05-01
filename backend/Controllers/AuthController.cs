@@ -78,7 +78,8 @@ namespace DogQueueApi.Controllers
             return Ok(new
             {
                 token = jwt,
-                username = user.Username
+                username = user.Username,
+                fullname = user.FullName
             });
         }
     }

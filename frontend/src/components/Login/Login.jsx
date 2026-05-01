@@ -25,6 +25,7 @@ export default function Login({ onLogin }) {
 
   if (response.ok && data?.token) {
     localStorage.setItem("token", data.token);
+    localStorage.setItem("fullname", data.fullname);
     onLogin?.(data.token);
     navigate("/appointments");
   } else {

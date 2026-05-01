@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import "./App.css";
 import Login from "./components/Login/Login";
 import Register from "./components/Register/Register";
@@ -8,6 +9,8 @@ import CreateAppointment from "./components/CreateAppointment/CreateAppointment"
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const navigate = useNavigate();
 
   // מקשיב לשינויים ב-localStorage
   useEffect(() => {
@@ -48,9 +51,12 @@ function App() {
 
       {token && (
         <>
-          <NavBar />
-          <MyAppointments />
-          <CreateAppointment />
+          <div className="logout-container">
+            <p>שלום, {localStorage.getItem("fullname")}</p>
+            <button className="logout-button" onClick={() => { localStorage.removeItem("token"); localStorage.removeItem("fullname"); setToken(null); navigate("/"); }}>Logout</button>
+          </div>
+          <MyAppointments refreshTrigger={refreshTrigger} />
+          <CreateAppointment onSuccess={() => setRefreshTrigger(prev => prev + 1)} />
         </>
       )}
     </div>

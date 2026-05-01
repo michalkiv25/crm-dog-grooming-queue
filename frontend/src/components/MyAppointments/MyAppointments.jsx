@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import EditAppointment from "../EditAppointment/EditAppointment";
 
-export default function MyAppointments() {
+export default function MyAppointments({ refreshTrigger }) {
   const [appointments, setAppointments] = useState([]);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -11,7 +11,7 @@ export default function MyAppointments() {
 
   useEffect(() => {
     loadAppointments();
-  }, [filterDate, filterCustomer]);
+  }, [filterDate, filterCustomer, refreshTrigger]);
 
   const loadAppointments = async () => {
     const token = localStorage.getItem("token");
