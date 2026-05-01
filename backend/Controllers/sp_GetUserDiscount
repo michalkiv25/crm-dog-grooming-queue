@@ -1,0 +1,13 @@
+CREATE PROCEDURE sp_GetUserDiscount
+    @Username NVARCHAR(50)
+AS
+BEGIN
+    SELECT 
+        COUNT(*) AS TotalAppointments,
+        CASE 
+            WHEN COUNT(*) > 3 THEN 0.10
+            ELSE 0
+        END AS Discount
+    FROM Appointments
+    WHERE Username = @Username
+END

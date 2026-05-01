@@ -2,6 +2,7 @@ import { useState } from "react";
 
 export default function CreateAppointment() {
   const [dogName, setDogName] = useState("");
+  const [dogSize, setDogSize] = useState("");
   const [date, setDate] = useState("");
 
   const createAppointment = async () => {
@@ -11,10 +12,11 @@ export default function CreateAppointment() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
+        Authorization: token ? `Bearer ${token}` : ""
       },
       body: JSON.stringify({
         dogName,
+        dogSize,
         date
       })
     });
@@ -22,6 +24,7 @@ export default function CreateAppointment() {
     if (response.ok) {
       alert("Appointment created 🐶🎉");
       setDogName("");
+      setDogSize("");
       setDate("");
     } else {
       alert("Failed ❌");
@@ -40,8 +43,17 @@ export default function CreateAppointment() {
 
       <br /><br />
 
+      <select value={dogSize} onChange={(e) => setDogSize(e.target.value)}>
+        <option value="">Select dog size</option>
+        <option value="small">Small (30 min, ₪100)</option>
+        <option value="medium">Medium (45 min, ₪150)</option>
+        <option value="large">Large (60 min, ₪200)</option>
+      </select>
+
+      <br /><br />
+
       <input
-        type="date"
+        type="datetime-local"
         value={date}
         onChange={(e) => setDate(e.target.value)}
       />

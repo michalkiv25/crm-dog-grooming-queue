@@ -7,29 +7,30 @@ export default function Login() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = async () => {
-    const response = await fetch("http://localhost:5285/api/auth/login", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        Username: username,
-        Password: password,
-      }),
-    });
+ const handleLogin = async () => {
+  const response = await fetch("http://localhost:5285/api/auth/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      username,
+      password,
+    }),
+  });
 
-    const data = await response.json().catch(() => null);
+  const data = await response.json().catch(() => null);
 
-    if (response.ok && data?.token) {
-     localStorage.setItem("token", data.token);
-      window.location.href = "/appointments";
+  console.log("LOGIN RESPONSE:", data);
 
-      navigate("/appointments");
-    } else {
-      alert(data?.message || "Login failed ❌");
-    }
-  };
+  if (response.ok && data?.token) {
+    localStorage.setItem("token", data.token);
+
+    navigate("/appointments"); // רק זה!
+  } else {
+    alert(data?.message || "Login failed ❌");
+  }
+};
 
   return (
     <div>
