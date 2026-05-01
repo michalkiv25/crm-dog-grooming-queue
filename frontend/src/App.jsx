@@ -25,6 +25,13 @@ function App() {
     };
   }, []);
 
+  // אם אין token ומנסים להכנס לנתיב שלא הבית, חזור לבית
+  useEffect(() => {
+    if (!token && window.location.pathname !== "/") {
+      navigate("/");
+    }
+  }, [token, navigate]);
+
   return (
     <div className="container">
       {!token && (
@@ -52,7 +59,7 @@ function App() {
       {token && (
         <>
           <div className="logout-container">
-            <p>שלום, {localStorage.getItem("fullname")}</p>
+            <p>שלום, {localStorage.getItem("fullname") || "משתמש"}</p>
             <button className="logout-button" onClick={() => { localStorage.removeItem("token"); localStorage.removeItem("fullname"); setToken(null); navigate("/"); }}>Logout</button>
           </div>
           <MyAppointments refreshTrigger={refreshTrigger} />
