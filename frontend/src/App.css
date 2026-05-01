@@ -48,11 +48,96 @@ button:hover {
   margin-bottom: 20px;
 }
 
-.cards-container {
+.home-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 15px;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 30px;
+  align-items: start;
   margin-top: 20px;
+}
+
+.hero-panel {
+  padding: 40px;
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  color: white;
+  border-radius: 24px;
+  box-shadow: 0 20px 40px rgba(79, 70, 229, 0.2);
+  margin-bottom: 20px;
+}
+
+.hero-panel h1 {
+  margin-top: 0;
+  font-size: 2.6rem;
+  letter-spacing: -0.03em;
+}
+
+.hero-panel p {
+  line-height: 1.8;
+  max-width: 520px;
+  margin: 20px 0 30px;
+}
+
+.hero-features {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hero-features span {
+  background: rgba(255, 255, 255, 0.18);
+  padding: 10px 14px;
+  border-radius: 999px;
+  font-size: 0.95rem;
+}
+
+.auth-grid {
+  display: grid;
+  gap: 32px;
+  margin-top: 30px;
+}
+
+.auth-card {
+  background: white;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 24px;
+  padding: 28px;
+  box-shadow: 0 20px 45px rgba(15, 23, 42, 0.08);
+}
+
+.auth-card h2 {
+  margin-top: 0;
+  font-size: 1.6rem;
+  color: #111827;
+}
+
+.auth-card label {
+  display: block;
+  margin-bottom: 16px;
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+.auth-card input {
+  width: 100%;
+  margin-top: 8px;
+}
+
+.primary-button {
+  width: 100%;
+  border-radius: 999px;
+  background: #4f46e5;
+  padding: 12px 18px;
+  font-weight: 700;
+}
+
+.primary-button:hover {
+  background: #4338ca;
+}
+
+@media (max-width: 960px) {
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .card {

@@ -35,35 +35,38 @@ export default function Register() {
   };
 
   return (
-    <div style={{ border: "1px solid #ccc", padding: 20, marginTop: 20 }}>
+    <div className="auth-card">
       <h2>Register 🐶</h2>
 
-      <input
-        placeholder="Username"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-      />
+      <label>
+        Username
+        <input
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
+      </label>
 
-      <br /><br />
+      <label>
+        Password
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </label>
 
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+      <label>
+        Full Name
+        <input
+          placeholder="Full Name"
+          value={fullName}
+          onChange={(e) => setFullName(e.target.value)}
+        />
+      </label>
 
-      <br /><br />
-
-      <input
-        placeholder="Full Name"
-        value={fullName}
-        onChange={(e) => setFullName(e.target.value)}
-      />
-
-      <br /><br />
-
-      <button onClick={handleRegister}>
+      <button className="primary-button" onClick={handleRegister}>
         Register
       </button>
     </div>

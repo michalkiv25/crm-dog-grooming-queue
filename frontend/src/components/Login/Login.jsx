@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-export default function Login() {
+export default function Login({ onLogin }) {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
@@ -25,31 +25,37 @@ export default function Login() {
 
   if (response.ok && data?.token) {
     localStorage.setItem("token", data.token);
-
-    navigate("/appointments"); // רק זה!
+    onLogin?.(data.token);
+    navigate("/appointments");
   } else {
     alert(data?.message || "Login failed ❌");
   }
 };
 
   return (
-    <div>
+    <div className="auth-card">
       <h2>Login 🔐</h2>
 
-      <input
-        placeholder="Username"
-        value={username}
-        onChange={(e) => setUsername(e.target.value)}
-      />
+      <label>
+        Username
+        <input
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+        />
+      </label>
 
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-      />
+      <label>
+        Password
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </label>
 
-      <button onClick={handleLogin}>Login</button>
+      <button className="primary-button" onClick={handleLogin}>Login</button>
     </div>
   );
 }
