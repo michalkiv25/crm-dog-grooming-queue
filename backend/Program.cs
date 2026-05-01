@@ -6,14 +6,11 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Controllers
 builder.Services.AddControllers();
 
-// 💾 DB (SQLite במקום SQL Server)
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite("Data Source=dogqueue.db"));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 🔐 JWT Auth
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -23,10 +20,8 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-
             ValidIssuer = "DogQueueApi",
             ValidAudience = "DogQueueApi",
-
             IssuerSigningKey = new SymmetricSecurityKey(
                 Encoding.UTF8.GetBytes("THIS_IS_MY_SUPER_SECRET_KEY_12345"))
         };
@@ -34,7 +29,6 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// 🌐 CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
@@ -47,20 +41,11 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// middleware
-app.UseHttpsRedirection();
-
 app.UseCors("AllowReactApp");
 
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
-
-// Swagger/OpenAPI (אם קיים)
-if (app.Environment.IsDevelopment())
-{
-    app.MapOpenApi();
-}
 
 app.Run();
