@@ -37,9 +37,7 @@ namespace DogQueueApi.Managers
 
             appointment.CalculatePriceAndDuration();
 
-            var discountResults = _context.Database.SqlQuery<DiscountResult>(
-                $"EXEC sp_GetUserDiscount @Username = {appointment.Username}").ToList();
-            var discount = discountResults.FirstOrDefault()?.Discount ?? 0;
+            var discount = GetLoyaltyDiscountRate(appointment.Username);
             appointment.Price *= (1 - discount);
 
             _context.Appointments.Add(appointment);
@@ -73,13 +71,21 @@ namespace DogQueueApi.Managers
             appointment.Date = updatedAppointment.Date;
             appointment.CalculatePriceAndDuration();
 
-            var discountResults = _context.Database.SqlQuery<DiscountResult>(
-                $"EXEC sp_GetUserDiscount @Username = {appointment.Username}").ToList();
-            var discount = discountResults.FirstOrDefault()?.Discount ?? 0;
+            var discount = GetLoyaltyDiscountRate(appointment.Username);
             appointment.Price *= (1 - discount);
 
             _context.SaveChanges();
             return ServiceResult<Appointment>.Ok(appointment);
+        }
+
+        /// <summary>
+        /// Same logic as sp_GetUserDiscount: 10% when user already has more than 3 appointments.
+        /// Works with SQLite and SQL Server (no stored procedure required).
+        /// </summary>
+        private decimal GetLoyaltyDiscountRate(string username)
+        {
+            var count = _context.Appointments.Count(a => a.Username == username);
+            return count > 3 ? 0.10m : 0m;
         }
 
         public ServiceResult<object?> Delete(string username, int id)

@@ -7,13 +7,34 @@ using DogQueueApi.Interfaces.Providers;
 using DogQueueApi.Managers;
 using DogQueueApi.Providers;
 using Microsoft.EntityFrameworkCore;
+using DogQueueApi.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
 
+var defaultConnection = builder.Configuration.GetConnectionString("DefaultConnection");
+if (!string.IsNullOrWhiteSpace(defaultConnection) &&
+    defaultConnection.Trim().StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
+{
+    var pathPart = defaultConnection.Trim()["Data Source=".Length..].Trim();
+    if (!Path.IsPathRooted(pathPart))
+        pathPart = Path.Combine(builder.Environment.ContentRootPath, pathPart);
+    defaultConnection = "Data Source=" + pathPart;
+}
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+{
+    if (!string.IsNullOrWhiteSpace(defaultConnection) &&
+        defaultConnection.Trim().StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
+    {
+        options.UseSqlite(defaultConnection);
+    }
+    else
+    {
+        options.UseSqlServer(defaultConnection);
+    }
+});
 builder.Services.AddScoped<IAuthManager, AuthManager>();
 builder.Services.AddScoped<IAppointmentsManager, AppointmentsManager>();
 builder.Services.AddSingleton<ICurrentUserProvider, CurrentUserProvider>();
@@ -48,6 +69,12 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    SqliteSchemaFixer.Apply(db);
+}
 
 app.UseCors("AllowReactApp");
 

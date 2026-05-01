@@ -1,5 +1,6 @@
 // Centralized API service for all backend calls
 const API_BASE_URL = "http://localhost:5285/api";
+const REQUEST_TIMEOUT_MS = 8000;
 
 // Helper function to get auth token
 const getAuthToken = () => localStorage.getItem("token");
@@ -7,6 +8,8 @@ const getAuthToken = () => localStorage.getItem("token");
 // Helper function for API calls with auth
 const apiCall = async (endpoint, options = {}) => {
   const token = getAuthToken();
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
   
   const headers = {
     "Content-Type": "application/json",
@@ -14,19 +17,36 @@ const apiCall = async (endpoint, options = {}) => {
     ...options.headers,
   };
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
-    headers,
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+      ...options,
+      headers,
+      signal: controller.signal,
+    });
 
-  const data = await response.json().catch(() => null);
+    const data = await response.json().catch(() => null);
 
-  return {
-    response,
-    data,
-    ok: response.ok,
-    status: response.status,
-  };
+    return {
+      response,
+      data,
+      ok: response.ok,
+      status: response.status,
+    };
+  } catch (error) {
+    const isTimeout = error?.name === "AbortError";
+    return {
+      response: null,
+      data: {
+        message: isTimeout
+          ? "Request timed out. Please try again."
+          : "Network error. Please try again.",
+      },
+      ok: false,
+      status: 0,
+    };
+  } finally {
+    clearTimeout(timeoutId);
+  }
 };
 
 // ==================== AUTH ENDPOINTS ====================

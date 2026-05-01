@@ -13,6 +13,27 @@ import MyAppointments from "./components/MyAppointments/MyAppointments";
 import CreateAppointment from "./components/CreateAppointment/CreateAppointment";
 import NotFound from "./components/NotFound/NotFound";
 
+function AuthenticatedDashboard({
+  refreshTrigger,
+  onRefreshAppointments,
+  onLogout,
+}) {
+  return (
+    <>
+      <div className="logout-container">
+        <p>שלום, {localStorage.getItem("fullname") || "משתמש"}</p>
+        <button className="logout-button" type="button" onClick={onLogout}>
+          Logout
+        </button>
+      </div>
+      <div className="appointments-dashboard">
+        <MyAppointments refreshTrigger={refreshTrigger} />
+        <CreateAppointment onSuccess={onRefreshAppointments} />
+      </div>
+    </>
+  );
+}
+
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -33,6 +54,46 @@ function App() {
       window.removeEventListener("storage", checkToken);
     };
   }, []);
+
+  useEffect(() => {
+    setToken(localStorage.getItem("token"));
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const syncFromStorage = () => setToken(localStorage.getItem("token"));
+    window.addEventListener("focus", syncFromStorage);
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") syncFromStorage();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("focus", syncFromStorage);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (token && !localStorage.getItem("token")) {
+      setToken(null);
+    }
+  }, [token]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("fullname");
+    setToken(null);
+    navigate("/");
+  };
+
+  const dashboard = token ? (
+    <AuthenticatedDashboard
+      refreshTrigger={refreshTrigger}
+      onRefreshAppointments={() =>
+        setRefreshTrigger((prev) => prev + 1)
+      }
+      onLogout={handleLogout}
+    />
+  ) : null;
 
   return (
     <div className={`container ${isKnownRoute ? "" : "container-plain"}`}>
@@ -76,26 +137,7 @@ function App() {
           path="/appointments"
           element={
             token ? (
-              <>
-                <div className="logout-container">
-                  <p>שלום, {localStorage.getItem("fullname") || "משתמש"}</p>
-                  <button
-                    className="logout-button"
-                    onClick={() => {
-                      localStorage.removeItem("token");
-                      localStorage.removeItem("fullname");
-                      setToken(null);
-                      navigate("/");
-                    }}
-                  >
-                    Logout
-                  </button>
-                </div>
-                <MyAppointments refreshTrigger={refreshTrigger} />
-                <CreateAppointment
-                  onSuccess={() => setRefreshTrigger((prev) => prev + 1)}
-                />
-              </>
+              dashboard
             ) : (
               <Navigate to="/" replace />
             )
@@ -104,7 +146,9 @@ function App() {
 
         <Route
           path="*"
-          element={<NotFound fallbackPath={token ? "/appointments" : "/"} />}
+          element={
+            <NotFound fallbackPath={token ? "/appointments" : "/"} />
+          }
         />
       </Routes>
     </div>

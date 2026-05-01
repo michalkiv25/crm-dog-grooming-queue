@@ -115,6 +115,12 @@ button:hover {
   background: var(--dark-brown);
 }
 
+.appointments-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
 .home-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -187,6 +193,7 @@ button:hover {
   margin-top: 0;
   height: 100%;
   box-sizing: border-box;
+
 }
 
 .auth-card h2 {
@@ -197,14 +204,21 @@ button:hover {
 
 .auth-card label {
   display: block;
-  margin-bottom: 16px;
+  margin-bottom: 22px;
   color: var(--dark-text);
   font-size: 0.95rem;
   font-weight: 600;
 }
 
-.auth-card input, .auth-card select {
+/* Same width for text, select, and read-only “open calendar” field:
+   without box-sizing + min-width, browsers size select/readonly inputs differently. */
+.auth-card input,
+.auth-card select {
+  display: block;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   margin-top: 8px;
   padding: 10px;
   border: 2px solid var(--tan);
@@ -375,6 +389,77 @@ button:hover {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 20px;
+}
+
+.modal.modal--datepicker {
+  max-width: min(100%, 380px);
+}
+
+.appointment-modal h3 {
+  margin-top: 0;
+  text-align: center;
+  color: var(--dark-brown);
+}
+
+.appointment-datepicker-wrap {
+  display: flex;
+  justify-content: center;
+  margin: 8px 0 4px;
+}
+
+.appointment-modal .react-datepicker {
+  font-family: Arial, sans-serif;
+  border: 2px solid var(--tan);
+  border-radius: 12px;
+  background: var(--beige);
+}
+
+.appointment-modal .react-datepicker__header {
+  background: var(--cream);
+  border-bottom: 2px solid var(--tan);
+  border-radius: 10px 10px 0 0;
+}
+
+.appointment-modal .react-datepicker__current-month,
+.appointment-modal .react-datepicker-time__header {
+  color: var(--dark-brown);
+}
+
+.appointment-modal .react-datepicker__day-name,
+.appointment-modal .react-datepicker__day {
+  color: var(--dark-text);
+}
+
+.appointment-modal .react-datepicker__day:hover {
+  background: var(--tan);
+}
+
+.appointment-modal .react-datepicker__day--selected,
+.appointment-modal .react-datepicker__day--keyboard-selected {
+  background: var(--primary-brown) !important;
+  color: var(--light-text) !important;
+}
+
+.appointment-modal .react-datepicker__day--disabled {
+  color: #aaa;
+}
+
+.appointment-modal .react-datepicker__navigation-icon::before {
+  border-color: var(--dark-brown);
+}
+
+.appointment-modal .react-datepicker__time-container {
+  border-left: 2px solid var(--tan);
+  width: 6rem;
+}
+
+.appointment-modal .react-datepicker__time-list-item--selected {
+  background: var(--primary-brown) !important;
+  color: var(--light-text) !important;
+}
+
+.appointment-modal .react-datepicker__time-list-item:hover {
+  background: var(--tan) !important;
 }
 
 .not-found-page {

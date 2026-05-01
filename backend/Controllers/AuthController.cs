@@ -35,7 +35,7 @@ namespace DogQueueApi.Controllers
 
         private IActionResult ToActionResult(ServiceResult<object?> result)
         {
-            var payload = result.Errors?.Length > 0
+            object payload = result.Errors?.Length > 0
                 ? new { message = result.Message, errors = result.Errors }
                 : result.Data ?? new { message = result.Message };
 
@@ -52,9 +52,9 @@ namespace DogQueueApi.Controllers
 
         private IActionResult ToActionResult(ServiceResult<LoginResponse> result)
         {
-            var payload = result.Errors?.Length > 0
+            object payload = result.Errors?.Length > 0
                 ? new { message = result.Message, errors = result.Errors }
-                : result.Data ?? new { message = result.Message };
+                : (object?)result.Data ?? new { message = result.Message };
 
             return result.StatusCode switch
             {

@@ -1,13 +1,18 @@
 import { useState } from "react";
+import DatePicker, { registerLocale } from "react-datepicker";
+import { format } from "date-fns";
+import { he } from "date-fns/locale";
+import "react-datepicker/dist/react-datepicker.css";
 import { appointmentsService } from "../../services/api";
+
+registerLocale("he", he);
 
 export default function CreateAppointment({ onSuccess }) {
   const [dogName, setDogName] = useState("");
   const [dogSize, setDogSize] = useState("");
   const [appointmentDateTime, setAppointmentDateTime] = useState("");
   const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const [pickerDate, setPickerDate] = useState("");
-  const [pickerTime, setPickerTime] = useState("");
+  const [modalSelected, setModalSelected] = useState(null);
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -54,11 +59,12 @@ export default function CreateAppointment({ onSuccess }) {
         setDogName("");
         setDogSize("");
         setAppointmentDateTime("");
+        setModalSelected(null);
         setErrors([]);
         onSuccess?.();
       } else {
-        const errorMessage = data?.errors?.length 
-          ? data.errors[0] 
+        const errorMessage = data?.errors?.length
+          ? data.errors[0]
           : data?.message || "Failed to create appointment ❌";
         setErrors([errorMessage]);
       }
@@ -70,36 +76,28 @@ export default function CreateAppointment({ onSuccess }) {
   };
 
   const openDateTimePicker = () => {
-    if (appointmentDateTime.includes("T")) {
-      const [datePart, timePart] = appointmentDateTime.split("T");
-      setPickerDate(datePart || "");
-      setPickerTime((timePart || "").slice(0, 5));
+    if (appointmentDateTime) {
+      const d = new Date(appointmentDateTime);
+      setModalSelected(Number.isNaN(d.getTime()) ? null : d);
     } else {
-      setPickerDate("");
-      setPickerTime("");
+      setModalSelected(null);
     }
     setIsPickerOpen(true);
   };
 
-  const handleDateTimeTriggerPointerDown = (event) => {
-    event.preventDefault();
-    openDateTimePicker();
-  };
-
-  const handleDateTimeTriggerKeyDown = (event) => {
-    if (event.key === "Enter" || event.key === " ") {
-      event.preventDefault();
-      openDateTimePicker();
-    }
-  };
+  /** Hide times earlier than “now” when the chosen day is today */
+  const filterPassedTime = (time) => time.getTime() > Date.now();
 
   const applyPickerSelection = () => {
-    if (!pickerDate || !pickerTime) {
-      setErrors(["Please choose both date and time"]);
+    if (!modalSelected) {
+      setErrors(["נא לבחור תאריך ושעה"]);
       return;
     }
-
-    setAppointmentDateTime(`${pickerDate}T${pickerTime}`);
+    if (modalSelected.getTime() <= Date.now()) {
+      setErrors(["נא לבחור תאריך ושעה בעתיד"]);
+      return;
+    }
+    setAppointmentDateTime(format(modalSelected, "yyyy-MM-dd'T'HH:mm:ss"));
     setErrors([]);
     setIsPickerOpen(false);
   };
@@ -121,7 +119,9 @@ export default function CreateAppointment({ onSuccess }) {
       {errors.length > 0 && (
         <div className="error-box">
           {errors.map((error, idx) => (
-            <p key={idx} className="error-message">❌ {error}</p>
+            <p key={idx} className="error-message">
+              ❌ {error}
+            </p>
           ))}
         </div>
       )}
@@ -153,10 +153,14 @@ export default function CreateAppointment({ onSuccess }) {
           type="text"
           value={appointmentDisplayValue}
           readOnly
-          placeholder="dd.mm.yyyy, --:--"
+          placeholder="לחצו לפתיחת יומן"
           onClick={openDateTimePicker}
-          onMouseDown={handleDateTimeTriggerPointerDown}
-          onKeyDown={handleDateTimeTriggerKeyDown}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              openDateTimePicker();
+            }
+          }}
           role="button"
           tabIndex={0}
           disabled={loading}
@@ -168,33 +172,36 @@ export default function CreateAppointment({ onSuccess }) {
       </button>
 
       {isPickerOpen && (
-        <div className="modal-overlay">
-          <div className="modal">
-            <h3>Choose appointment time</h3>
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="appointment-picker-title"
+        >
+          <div className="modal modal--datepicker appointment-modal" dir="rtl">
+            <h3 id="appointment-picker-title">בחרו תאריך ושעה</h3>
 
-            <label>
-              Date
-              <input
-                type="date"
-                value={pickerDate}
-                onChange={(e) => setPickerDate(e.target.value)}
+            <div className="appointment-datepicker-wrap">
+              <DatePicker
+                inline
+                selected={modalSelected}
+                onChange={(date) => setModalSelected(date)}
+                showTimeSelect
+                timeIntervals={15}
+                timeCaption="שעה"
+                dateFormat="Pp"
+                locale="he"
+                minDate={new Date()}
+                filterTime={filterPassedTime}
+                calendarClassName="appointment-calendar-inner"
               />
-            </label>
-
-            <label>
-              Time
-              <input
-                type="time"
-                value={pickerTime}
-                onChange={(e) => setPickerTime(e.target.value)}
-              />
-            </label>
+            </div>
 
             <div className="modal-buttons">
               <button type="button" onClick={() => setIsPickerOpen(false)}>
                 Cancel
               </button>
-              <button type="button" onClick={applyPickerSelection}>
+              <button type="button" className="primary-button" onClick={applyPickerSelection}>
                 Apply
               </button>
             </div>
