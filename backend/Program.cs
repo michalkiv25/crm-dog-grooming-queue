@@ -1,13 +1,19 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using DogQueueApi.Data;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Controllers
 builder.Services.AddControllers();
 
-// JWT Auth
+// 💾 DB (SQLite במקום SQL Server)
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite("Data Source=dogqueue.db"));
+
+// 🔐 JWT Auth
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
@@ -28,7 +34,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
-// CORS
+// 🌐 CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowReactApp", policy =>
@@ -41,17 +47,17 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-// 🔥 חשוב מאוד סדר נכון
+// middleware
 app.UseHttpsRedirection();
 
 app.UseCors("AllowReactApp");
 
-app.UseAuthentication();   // 👈 חייב לפני Authorization
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
-// OpenAPI רק בדיבאג
+// Swagger/OpenAPI (אם קיים)
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
