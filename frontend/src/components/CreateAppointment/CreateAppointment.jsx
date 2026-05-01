@@ -1,11 +1,21 @@
 import { useState } from "react";
+import { appointmentsService } from "../../services/api";
 
 export default function CreateAppointment({ onSuccess }) {
   const [dogName, setDogName] = useState("");
   const [dogSize, setDogSize] = useState("");
-  const [date, setDate] = useState("");
+  const [appointmentDate, setAppointmentDate] = useState("");
+  const [appointmentTime, setAppointmentTime] = useState("");
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  const buildAppointmentDateTime = () => {
+    if (!appointmentDate || !appointmentTime) {
+      return "";
+    }
+
+    return `${appointmentDate}T${appointmentTime}`;
+  };
 
   const validateInput = () => {
     const newErrors = [];
@@ -24,9 +34,11 @@ export default function CreateAppointment({ onSuccess }) {
       newErrors.push("Invalid dog size selected");
     }
 
-    if (!date) {
+    const appointmentDateTime = buildAppointmentDateTime();
+
+    if (!appointmentDate || !appointmentTime) {
       newErrors.push("Appointment date is required");
-    } else if (new Date(date) <= new Date()) {
+    } else if (new Date(appointmentDateTime) <= new Date()) {
       newErrors.push("Appointment date must be in the future");
     }
 
@@ -39,28 +51,18 @@ export default function CreateAppointment({ onSuccess }) {
 
     setLoading(true);
     try {
-      const token = localStorage.getItem("token");
+      const { ok, data } = await appointmentsService.create(
+        dogName,
+        dogSize,
+        buildAppointmentDateTime()
+      );
 
-      const response = await fetch("http://localhost:5285/api/appointments", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: token ? `Bearer ${token}` : ""
-        },
-        body: JSON.stringify({
-          dogName,
-          dogSize,
-          date
-        })
-      });
-
-      const data = await response.json().catch(() => null);
-
-      if (response.ok) {
+      if (ok) {
         alert("Appointment created 🐶🎉");
         setDogName("");
         setDogSize("");
-        setDate("");
+        setAppointmentDate("");
+        setAppointmentTime("");
         setErrors([]);
         onSuccess?.();
       } else {
@@ -109,11 +111,21 @@ export default function CreateAppointment({ onSuccess }) {
       </label>
 
       <label>
-        Appointment Date & Time
+        Appointment Date
         <input
-          type="datetime-local"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
+          type="date"
+          value={appointmentDate}
+          onChange={(e) => setAppointmentDate(e.target.value)}
+          disabled={loading}
+        />
+      </label>
+
+      <label>
+        Appointment Time
+        <input
+          type="time"
+          value={appointmentTime}
+          onChange={(e) => setAppointmentTime(e.target.value)}
           disabled={loading}
         />
       </label>

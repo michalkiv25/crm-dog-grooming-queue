@@ -10,7 +10,7 @@
         "projectUniqueName": "/Users/michaela/dog-queue-project/backend/DogQueueApi.csproj",
         "projectName": "DogQueueApi",
         "projectPath": "/Users/michaela/dog-queue-project/backend/DogQueueApi.csproj",
-        "packagesPath": "/Users/michaela/.nuget/packages/",
+        "packagesPath": "/var/folders/1h/b2hbnsh13v71cdsxqdxr3mbr0000gp/T/cursor-sandbox-cache/0962ed8589f9545c2c02251994832066/nuget",
         "outputPath": "/Users/michaela/dog-queue-project/backend/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [

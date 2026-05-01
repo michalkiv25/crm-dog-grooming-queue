@@ -5,7 +5,7 @@ export default function NavBar() {
 
  const logout = () => {
   localStorage.removeItem("token");
-  window.location.reload(); // 👈 גם כאן
+  window.location.reload(); 
 };
 
   return (

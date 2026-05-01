@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { appointmentsService } from "../../services/api";
 import EditAppointment from "../EditAppointment/EditAppointment";
 
 export default function MyAppointments({ refreshTrigger }) {
@@ -21,87 +22,52 @@ export default function MyAppointments({ refreshTrigger }) {
       return;
     }
 
-    let url = "http://localhost:5285/api/appointments";
-    if (filterDate || filterCustomer) {
-      url += "/filter?";
-      if (filterDate) url += `date=${filterDate}&`;
-      if (filterCustomer) url += `customerName=${filterCustomer}`;
-    }
-
     try {
-      const res = await fetch(url, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text);
+      let result;
+      if (filterDate || filterCustomer) {
+        result = await appointmentsService.filter(filterDate, filterCustomer);
+      } else {
+        result = await appointmentsService.getAll();
       }
 
-      const data = await res.json();
-      setAppointments(data);
+      if (result.ok) {
+        setAppointments(result.data || []);
+      } else {
+        console.error("Failed to load appointments:", result.data);
+      }
     } catch (err) {
-      console.log("ERROR:", err);
+      console.error("ERROR:", err);
     } finally {
       setLoading(false);
     }
   };
 
   const deleteAppointment = async (id) => {
-    const token = localStorage.getItem("token");
+    const { ok } = await appointmentsService.delete(id);
 
-    const res = await fetch(
-      `http://localhost:5285/api/appointments/${id}`,
-      {
-        method: "DELETE",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    if (res.ok) {
+    if (ok) {
       setAppointments((prev) =>
         prev.filter((a) => a.id !== id)
       );
+      alert("Appointment deleted ✓");
     } else {
       alert("Failed to delete ❌");
     }
   };
 
   const saveEdit = async (id, dogName, dogSize, date) => {
-    const token = localStorage.getItem("token");
+    const { ok, data } = await appointmentsService.update(id, dogName, dogSize, date);
 
-    const res = await fetch(
-      `http://localhost:5285/api/appointments/${id}`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          dogName,
-          dogSize,
-          date,
-        }),
-      }
-    );
-
-    if (res.ok) {
-      const updated = await res.json();
-
+    if (ok) {
       setAppointments((prev) =>
         prev.map((a) =>
-          a.id === id ? updated : a
+          a.id === id ? data : a
         )
       );
 
       setEditing(null);
     } else {
-      alert("Failed to update ❌");
+      console.error("Failed to update:", data);
     }
   };
 

@@ -1,6 +1,7 @@
 import { useState } from "react";
+import { authService } from "../../services/api";
 
-export default function Register() {
+export default function Register({ onSwitchToLogin }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -41,22 +42,10 @@ export default function Register() {
 
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:5285/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          Username: username.trim(),
-          Password: password.trim(),
-          FullName: fullName.trim(),
-        }),
-      });
-
-      const data = await response.json().catch(() => null);
+      const { ok, data } = await authService.register(username, password, fullName);
       console.log("SERVER RESPONSE:", data);
 
-      if (response.ok) {
+      if (ok) {
         alert("User registered 🎉");
         setUsername("");
         setPassword("");
@@ -120,6 +109,17 @@ export default function Register() {
       <button className="primary-button" onClick={handleRegister} disabled={loading}>
         {loading ? "Registering..." : "Register"}
       </button>
+
+      <p className="auth-switch-text">
+        כבר רשום?{" "}
+        <button
+          type="button"
+          className="auth-link-button"
+          onClick={() => onSwitchToLogin?.()}
+        >
+          להתחברות
+        </button>
+      </p>
     </div>
   );
 }

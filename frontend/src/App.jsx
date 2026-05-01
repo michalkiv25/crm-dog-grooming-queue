@@ -10,9 +10,9 @@ import CreateAppointment from "./components/CreateAppointment/CreateAppointment"
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [authMode, setAuthMode] = useState("login");
   const navigate = useNavigate();
 
-  // מקשיב לשינויים ב-localStorage
   useEffect(() => {
     const checkToken = () => {
       setToken(localStorage.getItem("token"));
@@ -25,7 +25,6 @@ function App() {
     };
   }, []);
 
-  // אם אין token ומנסים להכנס לנתיב שלא הבית, חזור לבית
   useEffect(() => {
     if (!token && window.location.pathname !== "/") {
       navigate("/");
@@ -50,8 +49,14 @@ function App() {
             </div>
           </section>
           <section className="auth-grid">
-            <Register />
-            <Login onLogin={(token) => setToken(token)} />
+            {authMode === "login" ? (
+              <Login
+                onLogin={(nextToken) => setToken(nextToken)}
+                onSwitchToRegister={() => setAuthMode("register")}
+              />
+            ) : (
+              <Register onSwitchToLogin={() => setAuthMode("login")} />
+            )}
           </section>
         </main>
       )}

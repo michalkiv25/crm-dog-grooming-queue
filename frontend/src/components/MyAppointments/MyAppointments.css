@@ -39,7 +39,6 @@ h2 {
   color: #666;
 }
 
-/* כפתור מחיקה */
 .card button {
   background: #ef4444;
   margin-top: 10px;
@@ -51,12 +50,10 @@ h2 {
   transition: 0.2s;
 }
 
-/* hover לכפתור */
 .card button:hover {
   background: #dc2626;
 }
 
-/* מצב ריק */
 .empty {
   text-align: center;
   color: #888;

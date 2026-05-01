@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { authService } from "../../services/api";
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, onSwitchToRegister }) {
   const navigate = useNavigate();
 
   const [username, setUsername] = useState("");
@@ -29,22 +30,11 @@ export default function Login({ onLogin }) {
 
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:5285/api/auth/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          username,
-          password,
-        }),
-      });
-
-      const data = await response.json().catch(() => null);
+      const { ok, data } = await authService.login(username, password);
 
       console.log("LOGIN RESPONSE:", data);
 
-      if (response.ok && data?.token) {
+      if (ok && data?.token) {
         localStorage.setItem("token", data.token);
         localStorage.setItem("fullname", data.fullname);
         onLogin?.(data.token);
@@ -98,6 +88,17 @@ export default function Login({ onLogin }) {
       <button className="primary-button" onClick={handleLogin} disabled={loading}>
         {loading ? "Logging in..." : "Login"}
       </button>
+
+      <p className="auth-switch-text">
+        אין לך חשבון?{" "}
+        <button
+          type="button"
+          className="auth-link-button"
+          onClick={() => onSwitchToRegister?.()}
+        >
+          להרשמה
+        </button>
+      </p>
     </div>
   );
 }

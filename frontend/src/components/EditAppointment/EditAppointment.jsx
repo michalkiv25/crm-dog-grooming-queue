@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { appointmentsService } from "../../services/api";
 
 export default function EditAppointment({ appointment, onSave, onCancel }) {
   const [dogName, setDogName] = useState("");
@@ -40,10 +41,27 @@ export default function EditAppointment({ appointment, onSave, onCancel }) {
     return newErrors.length === 0;
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!validateInput()) return;
     setLoading(true);
-    onSave(appointment.id, dogName, dogSize, date);
+
+    try {
+      const { ok, data } = await appointmentsService.update(appointment.id, dogName, dogSize, date);
+
+      if (ok) {
+        alert("Appointment updated 💾");
+        onSave?.(appointment.id, dogName, dogSize, date);
+      } else {
+        const errorMessage = data?.errors?.length 
+          ? data.errors[0] 
+          : data?.message || "Failed to update appointment ❌";
+        setErrors([errorMessage]);
+        setLoading(false);
+      }
+    } catch (err) {
+      setErrors(["Network error. Please try again."]);
+      setLoading(false);
+    }
   };
 
   return (
