@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("DogQueueApi")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+23f09fd5989388c8c0d66a6a045ffda3309a7dbb")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+41e8d8d130b4f65c4d60544cb29cc5e34f75c9e9")]
 [assembly: System.Reflection.AssemblyProductAttribute("DogQueueApi")]
 [assembly: System.Reflection.AssemblyTitleAttribute("DogQueueApi")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

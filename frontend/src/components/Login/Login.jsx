@@ -11,8 +11,8 @@ const handleLogin = async () => {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      username: username,   // 👈 קטן!
-      password: password    // 👈 קטן!
+      username,
+      password,
     }),
   });
 

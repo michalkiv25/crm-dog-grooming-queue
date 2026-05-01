@@ -1,31 +1,42 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function EditAppointment({ appointment, onSave, onCancel }) {
-  const [dogName, setDogName] = useState(appointment.dogName);
-  const [date, setDate] = useState(appointment.date);
+  const [dogName, setDogName] = useState("");
+  const [date, setDate] = useState("");
+
+  useEffect(() => {
+    setDogName(appointment.dogName);
+    setDate(appointment.date);
+  }, [appointment]);
 
   const handleSave = () => {
     onSave(appointment.id, dogName, date);
   };
 
   return (
-    <div>
-      <h4>Edit Appointment ✏️</h4>
+    <div className="modal-overlay">
+      <div className="modal">
 
-      <input
-        value={dogName}
-        onChange={(e) => setDogName(e.target.value)}
-        placeholder="Dog name"
-      />
+        <h3>✏️ Edit Appointment</h3>
 
-      <input
-        value={date}
-        onChange={(e) => setDate(e.target.value)}
-        placeholder="Date"
-      />
+        <input
+          value={dogName}
+          onChange={(e) => setDogName(e.target.value)}
+          placeholder="Dog name"
+        />
 
-      <button onClick={handleSave}>Save 💾</button>
-      <button onClick={onCancel}>Cancel ❌</button>
+        <input
+          type="datetime-local"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+        />
+
+        <div className="modal-buttons">
+          <button onClick={handleSave}>Save 💾</button>
+          <button onClick={onCancel}>Cancel ❌</button>
+        </div>
+
+      </div>
     </div>
   );
 }

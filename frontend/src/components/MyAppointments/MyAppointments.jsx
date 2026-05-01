@@ -4,34 +4,46 @@ import EditAppointment from "../EditAppointment/EditAppointment";
 export default function MyAppointments() {
   const [appointments, setAppointments] = useState([]);
   const [editing, setEditing] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // 📥 טעינת תורים
   useEffect(() => {
     const token = localStorage.getItem("token");
 
+    console.log("TOKEN:", token);
+
     if (!token) {
       console.log("NO TOKEN FOUND");
+      setLoading(false);
       return;
     }
 
-    const loadAppointments = () => {
-      fetch("http://localhost:5285/api/appointments", {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-        .then((res) => {
-          if (!res.ok) throw new Error("Unauthorized");
-          return res.json();
-        })
-        .then((data) => setAppointments(data))
-        .catch((err) => console.log(err));
+    const loadAppointments = async () => {
+      try {
+        const res = await fetch("http://localhost:5285/api/appointments", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        console.log("STATUS:", res.status);
+
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text);
+        }
+
+        const data = await res.json();
+        setAppointments(data);
+      } catch (err) {
+        console.log("ERROR:", err);
+      } finally {
+        setLoading(false);
+      }
     };
 
     loadAppointments();
   }, []);
 
-  // 🗑️ מחיקה
   const deleteAppointment = async (id) => {
     const token = localStorage.getItem("token");
 
@@ -54,7 +66,6 @@ export default function MyAppointments() {
     }
   };
 
-  // ✏️ שמירת עריכה
   const saveEdit = async (id, dogName, date) => {
     const token = localStorage.getItem("token");
 
@@ -88,17 +99,21 @@ export default function MyAppointments() {
     }
   };
 
+  if (loading) {
+    return <h3>Loading appointments...</h3>;
+  }
+
   return (
     <div>
       <h2>🐶 My Appointments</h2>
 
-      <div className="cards-container">
-        {appointments.length === 0 && (
-          <p className="empty">
-            No appointments yet 🐶
-          </p>
-        )}
+      {appointments.length === 0 && (
+        <p className="empty">
+          No appointments yet 🐶
+        </p>
+      )}
 
+      <div className="cards-container">
         {appointments.map((a) => (
           <div key={a.id} className="card">
             {editing === a.id ? (
