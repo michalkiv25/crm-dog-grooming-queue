@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using DogQueueApi.Models;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace DogQueueApi.Controllers
 {
@@ -11,15 +13,15 @@ namespace DogQueueApi.Controllers
         private static List<Appointment> appointments = new();
         private static int nextId = 1;
 
-        // ➕ יצירת תור (רק מחובר)
+        // ➕ יצירת תור
         [Authorize]
         [HttpPost]
-        public IActionResult Create(Appointment appt)
+        public IActionResult Create([FromBody] Appointment appt)
         {
             var username = User.Identity?.Name;
 
             appt.Id = nextId++;
-            appt.Username = username!;
+            appt.Username = username;
 
             appointments.Add(appt);
 
@@ -39,9 +41,8 @@ namespace DogQueueApi.Controllers
 
             return Ok(userAppointments);
         }
-  
 
-
+        // ❌ מחיקה
         [Authorize]
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
@@ -53,7 +54,6 @@ namespace DogQueueApi.Controllers
             if (appointment == null)
                 return NotFound("Appointment not found");
 
-            // רק בעל התור יכול למחוק
             if (appointment.Username != username)
                 return Forbid("You can only delete your own appointments");
 
@@ -62,9 +62,10 @@ namespace DogQueueApi.Controllers
             return Ok(new { message = "Deleted successfully" });
         }
 
+        // ✏️ עדכון
         [Authorize]
         [HttpPut("{id}")]
-        public IActionResult Update(int id, Appointment updated)
+        public IActionResult Update(int id, [FromBody] Appointment updated)
         {
             var username = User.Identity?.Name;
 
@@ -76,10 +77,10 @@ namespace DogQueueApi.Controllers
             if (appointment.Username != username)
                 return Forbid("You can only edit your own appointments");
 
-            // עדכון שדות
             appointment.DogName = updated.DogName;
             appointment.Date = updated.Date;
 
             return Ok(appointment);
         }
-        }  }
+    }
+}

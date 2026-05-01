@@ -1,35 +1,38 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
+  const navigate = useNavigate();
+
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
 
-const handleLogin = async () => {
-  const response = await fetch("http://localhost:5285/api/auth/login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      username,
-      password,
-    }),
-  });
+  const handleLogin = async () => {
+    const response = await fetch("http://localhost:5285/api/auth/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        Username: username,
+        Password: password,
+      }),
+    });
 
-  const data = await response.json().catch(() => null);
+    const data = await response.json().catch(() => null);
 
-  console.log("LOGIN RESPONSE:", data);
+    if (response.ok && data?.token) {
+     localStorage.setItem("token", data.token);
+      window.location.href = "/appointments";
 
-  if (response.ok) {
-    localStorage.setItem("token", data.token);
-    alert("Login success 🎉");
-  } else {
-    alert(data?.message || "Login failed ❌");
-  }
-};
+      navigate("/appointments");
+    } else {
+      alert(data?.message || "Login failed ❌");
+    }
+  };
 
   return (
-    <div style={{ border: "1px solid #ccc", padding: 20 }}>
+    <div>
       <h2>Login 🔐</h2>
 
       <input
@@ -38,8 +41,6 @@ const handleLogin = async () => {
         onChange={(e) => setUsername(e.target.value)}
       />
 
-      <br /><br />
-
       <input
         type="password"
         placeholder="Password"
@@ -47,11 +48,7 @@ const handleLogin = async () => {
         onChange={(e) => setPassword(e.target.value)}
       />
 
-      <br /><br />
-
-      <button onClick={handleLogin}>
-        Login
-      </button>
+      <button onClick={handleLogin}>Login</button>
     </div>
   );
 }

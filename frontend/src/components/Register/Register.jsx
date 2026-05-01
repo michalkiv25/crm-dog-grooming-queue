@@ -6,20 +6,26 @@ export default function Register() {
   const [fullName, setFullName] = useState("");
 
   const handleRegister = async () => {
+    console.log({ username, password, fullName });
+
     const response = await fetch("http://localhost:5285/api/auth/register", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        Username: username,
-        Password: password,
-        FullName: fullName,
+        Username: username.trim(),
+        Password: password.trim(),
+        FullName: fullName.trim(),
       }),
     });
 
+    const text = await response.text();
+    console.log("SERVER RESPONSE:", text);
+
     if (response.ok) {
       alert("User registered 🎉");
+
       setUsername("");
       setPassword("");
       setFullName("");
