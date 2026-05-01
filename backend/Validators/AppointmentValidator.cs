@@ -25,9 +25,6 @@ namespace DogQueueApi.Validators
             else if (appointment.Date <= DateTime.Now)
                 errors.Add("Appointment date must be in the future");
 
-            if (string.IsNullOrWhiteSpace(appointment.Username))
-                errors.Add("Username is required");
-
             return (errors.Count == 0, errors.ToArray());
         }
     }

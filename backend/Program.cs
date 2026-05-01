@@ -2,6 +2,10 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using DogQueueApi.Data;
+using DogQueueApi.Interfaces.Managers;
+using DogQueueApi.Interfaces.Providers;
+using DogQueueApi.Managers;
+using DogQueueApi.Providers;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -10,6 +14,10 @@ builder.Services.AddControllers();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<IAuthManager, AuthManager>();
+builder.Services.AddScoped<IAppointmentsManager, AppointmentsManager>();
+builder.Services.AddSingleton<ICurrentUserProvider, CurrentUserProvider>();
+builder.Services.AddSingleton<ITokenProvider, JwtTokenProvider>();
 
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>

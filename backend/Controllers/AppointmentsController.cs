@@ -1,131 +1,102 @@
 using Microsoft.AspNetCore.Mvc;
-using DogQueueApi.Data;
+using DogQueueApi.Interfaces.Managers;
+using DogQueueApi.Interfaces.Providers;
 using DogQueueApi.Models;
-using DogQueueApi.Validators;
 using Microsoft.AspNetCore.Authorization;
-using System.Linq;
-using Microsoft.EntityFrameworkCore;
+using DogQueueApi.Services;
 
 namespace DogQueueApi.Controllers
 {
-    public class DiscountResult
-    {
-        public int TotalAppointments { get; set; }
-        public decimal Discount { get; set; }
-    }
-
     [ApiController]
     [Route("api/appointments")]
     public class AppointmentsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IAppointmentsManager _appointmentsManager;
+        private readonly ICurrentUserProvider _currentUserProvider;
 
-        public AppointmentsController(AppDbContext context)
+        public AppointmentsController(
+            IAppointmentsManager appointmentsManager,
+            ICurrentUserProvider currentUserProvider)
         {
-            _context = context;
+            _appointmentsManager = appointmentsManager;
+            _currentUserProvider = currentUserProvider;
         }
 
         [Authorize]
         [HttpGet]
         public IActionResult GetAll()
         {
-            var username = User.Identity?.Name;
-            var appointments = _context.Appointments.Where(a => a.Username == username).ToList();
-            return Ok(appointments);
+            var username = _currentUserProvider.GetUsername(User);
+            if (string.IsNullOrWhiteSpace(username))
+                return Unauthorized(new { message = "Invalid token" });
+
+            var result = _appointmentsManager.GetAll(username);
+            return ToActionResult(result);
         }
 
         [Authorize]
         [HttpPost]
         public IActionResult Create([FromBody] Appointment appt)
         {
-            // Validate appointment input
-            var (isValid, errors) = AppointmentValidator.Validate(appt);
-            if (!isValid)
-            {
-                return BadRequest(new { message = "Validation failed", errors });
-            }
+            var username = _currentUserProvider.GetUsername(User);
+            if (string.IsNullOrWhiteSpace(username))
+                return Unauthorized(new { message = "Invalid token" });
 
-            appt.Username = User.Identity?.Name ?? appt.Username;
-            appt.CalculatePriceAndDuration();
-
-            // Get discount using stored procedure
-            var discountResults = _context.Database.SqlQuery<DiscountResult>(
-                $"EXEC sp_GetUserDiscount @Username = {appt.Username}").ToList();
-            var discount = discountResults.FirstOrDefault()?.Discount ?? 0;
-            appt.Price *= (1 - discount);
-
-            _context.Appointments.Add(appt);
-            _context.SaveChanges();
-
-            return Ok(appt);
+            var result = _appointmentsManager.Create(username, appt);
+            return ToActionResult(result);
         }
 
         [Authorize]
         [HttpPut("{id}")]
         public IActionResult Update(int id, [FromBody] Appointment updatedAppt)
         {
-            // Validate appointment input
-            var (isValid, errors) = AppointmentValidator.Validate(updatedAppt);
-            if (!isValid)
-            {
-                return BadRequest(new { message = "Validation failed", errors });
-            }
+            var username = _currentUserProvider.GetUsername(User);
+            if (string.IsNullOrWhiteSpace(username))
+                return Unauthorized(new { message = "Invalid token" });
 
-            var appt = _context.Appointments.FirstOrDefault(a => a.Id == id);
-            if (appt == null) return NotFound();
-
-            if (appt.Username != User.Identity?.Name) return Forbid();
-
-            appt.DogName = updatedAppt.DogName;
-            appt.DogSize = updatedAppt.DogSize;
-            appt.Date = updatedAppt.Date;
-            appt.CalculatePriceAndDuration();
-
-            // Recalculate discount
-            var discountResults = _context.Database.SqlQuery<DiscountResult>(
-                $"EXEC sp_GetUserDiscount @Username = {appt.Username}").ToList();
-            var discount = discountResults.FirstOrDefault()?.Discount ?? 0;
-            appt.Price *= (1 - discount);
-
-            _context.SaveChanges();
-            return Ok(appt);
+            var result = _appointmentsManager.Update(username, id, updatedAppt);
+            return ToActionResult(result);
         }
 
         [Authorize]
         [HttpDelete("{id}")]
         public IActionResult Delete(int id)
         {
-            var appt = _context.Appointments.FirstOrDefault(a => a.Id == id);
-            if (appt == null) return NotFound();
+            var username = _currentUserProvider.GetUsername(User);
+            if (string.IsNullOrWhiteSpace(username))
+                return Unauthorized(new { message = "Invalid token" });
 
-            if (appt.Username != User.Identity?.Name) return Forbid();
-
-            if (appt.Date.Date == DateTime.Now.Date) return BadRequest("Cannot delete appointments for today");
-
-            _context.Appointments.Remove(appt);
-            _context.SaveChanges();
-
-            return Ok();
+            var result = _appointmentsManager.Delete(username, id);
+            return ToActionResult(result);
         }
 
         [Authorize]
         [HttpGet("filter")]
         public IActionResult GetFiltered(DateTime? date, string? customerName)
         {
-            var username = User.Identity?.Name;
-            var query = _context.Appointments.Where(a => a.Username == username);
+            var username = _currentUserProvider.GetUsername(User);
+            if (string.IsNullOrWhiteSpace(username))
+                return Unauthorized(new { message = "Invalid token" });
 
-            if (date.HasValue)
+            var result = _appointmentsManager.GetFiltered(username, date, customerName);
+            return ToActionResult(result);
+        }
+
+        private IActionResult ToActionResult<T>(ServiceResult<T> result)
+        {
+            var payload = result.Errors?.Length > 0
+                ? new { message = result.Message, errors = result.Errors }
+                : result.Data ?? (object)new { message = result.Message };
+
+            return result.StatusCode switch
             {
-                query = query.Where(a => a.Date.Date == date.Value.Date);
-            }
-
-            if (!string.IsNullOrEmpty(customerName))
-            {
-                query = query.Where(a => a.Username.Contains(customerName));
-            }
-
-            return Ok(query.ToList());
+                200 => Ok(payload),
+                400 => BadRequest(payload),
+                401 => Unauthorized(payload),
+                403 => StatusCode(403, payload),
+                404 => NotFound(payload),
+                _ => StatusCode(result.StatusCode, payload)
+            };
         }
     }
 }

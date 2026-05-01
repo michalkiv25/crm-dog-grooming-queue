@@ -4,18 +4,12 @@ import { appointmentsService } from "../../services/api";
 export default function CreateAppointment({ onSuccess }) {
   const [dogName, setDogName] = useState("");
   const [dogSize, setDogSize] = useState("");
-  const [appointmentDate, setAppointmentDate] = useState("");
-  const [appointmentTime, setAppointmentTime] = useState("");
+  const [appointmentDateTime, setAppointmentDateTime] = useState("");
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [pickerDate, setPickerDate] = useState("");
+  const [pickerTime, setPickerTime] = useState("");
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(false);
-
-  const buildAppointmentDateTime = () => {
-    if (!appointmentDate || !appointmentTime) {
-      return "";
-    }
-
-    return `${appointmentDate}T${appointmentTime}`;
-  };
 
   const validateInput = () => {
     const newErrors = [];
@@ -34,9 +28,7 @@ export default function CreateAppointment({ onSuccess }) {
       newErrors.push("Invalid dog size selected");
     }
 
-    const appointmentDateTime = buildAppointmentDateTime();
-
-    if (!appointmentDate || !appointmentTime) {
+    if (!appointmentDateTime) {
       newErrors.push("Appointment date is required");
     } else if (new Date(appointmentDateTime) <= new Date()) {
       newErrors.push("Appointment date must be in the future");
@@ -54,15 +46,14 @@ export default function CreateAppointment({ onSuccess }) {
       const { ok, data } = await appointmentsService.create(
         dogName,
         dogSize,
-        buildAppointmentDateTime()
+        appointmentDateTime
       );
 
       if (ok) {
         alert("Appointment created 🐶🎉");
         setDogName("");
         setDogSize("");
-        setAppointmentDate("");
-        setAppointmentTime("");
+        setAppointmentDateTime("");
         setErrors([]);
         onSuccess?.();
       } else {
@@ -77,6 +68,51 @@ export default function CreateAppointment({ onSuccess }) {
       setLoading(false);
     }
   };
+
+  const openDateTimePicker = () => {
+    if (appointmentDateTime.includes("T")) {
+      const [datePart, timePart] = appointmentDateTime.split("T");
+      setPickerDate(datePart || "");
+      setPickerTime((timePart || "").slice(0, 5));
+    } else {
+      setPickerDate("");
+      setPickerTime("");
+    }
+    setIsPickerOpen(true);
+  };
+
+  const handleDateTimeTriggerPointerDown = (event) => {
+    event.preventDefault();
+    openDateTimePicker();
+  };
+
+  const handleDateTimeTriggerKeyDown = (event) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault();
+      openDateTimePicker();
+    }
+  };
+
+  const applyPickerSelection = () => {
+    if (!pickerDate || !pickerTime) {
+      setErrors(["Please choose both date and time"]);
+      return;
+    }
+
+    setAppointmentDateTime(`${pickerDate}T${pickerTime}`);
+    setErrors([]);
+    setIsPickerOpen(false);
+  };
+
+  const appointmentDisplayValue = appointmentDateTime
+    ? new Date(appointmentDateTime).toLocaleString("he-IL", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
 
   return (
     <div className="auth-card">
@@ -111,21 +147,18 @@ export default function CreateAppointment({ onSuccess }) {
       </label>
 
       <label>
-        Appointment Date
+        Appointment Date & Time
         <input
-          type="date"
-          value={appointmentDate}
-          onChange={(e) => setAppointmentDate(e.target.value)}
-          disabled={loading}
-        />
-      </label>
-
-      <label>
-        Appointment Time
-        <input
-          type="time"
-          value={appointmentTime}
-          onChange={(e) => setAppointmentTime(e.target.value)}
+          className="date-time-trigger"
+          type="text"
+          value={appointmentDisplayValue}
+          readOnly
+          placeholder="dd.mm.yyyy, --:--"
+          onClick={openDateTimePicker}
+          onMouseDown={handleDateTimeTriggerPointerDown}
+          onKeyDown={handleDateTimeTriggerKeyDown}
+          role="button"
+          tabIndex={0}
           disabled={loading}
         />
       </label>
@@ -133,6 +166,41 @@ export default function CreateAppointment({ onSuccess }) {
       <button className="primary-button" onClick={createAppointment} disabled={loading}>
         {loading ? "Creating..." : "Create Appointment"}
       </button>
+
+      {isPickerOpen && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <h3>Choose appointment time</h3>
+
+            <label>
+              Date
+              <input
+                type="date"
+                value={pickerDate}
+                onChange={(e) => setPickerDate(e.target.value)}
+              />
+            </label>
+
+            <label>
+              Time
+              <input
+                type="time"
+                value={pickerTime}
+                onChange={(e) => setPickerTime(e.target.value)}
+              />
+            </label>
+
+            <div className="modal-buttons">
+              <button type="button" onClick={() => setIsPickerOpen(false)}>
+                Cancel
+              </button>
+              <button type="button" onClick={applyPickerSelection}>
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

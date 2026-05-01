@@ -1,13 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
-using DogQueueApi.Data;
+using DogQueueApi.Interfaces.Managers;
 using DogQueueApi.Models;
-using DogQueueApi.Validators;
-using System.Linq;
-using System;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
+using DogQueueApi.Models.Auth;
+using DogQueueApi.Services;
 
 namespace DogQueueApi.Controllers
 {
@@ -15,80 +10,61 @@ namespace DogQueueApi.Controllers
     [Route("api/auth")]
     public class AuthController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        private readonly IAuthManager _authManager;
 
-        public AuthController(AppDbContext context)
+        public AuthController(IAuthManager authManager)
         {
-            _context = context;
+            _authManager = authManager;
         }
 
         // ---------------- REGISTER ----------------
         [HttpPost("register")]
         public IActionResult Register([FromBody] User user)
         {
-            // Validate user input
-            var (isValid, errors) = UserValidator.ValidateRegister(user);
-            if (!isValid)
-            {
-                return BadRequest(new { message = "Validation failed", errors });
-            }
-
-            if (_context.Users.Any(u => u.Username == user.Username))
-            {
-                return BadRequest(new { message = "Username already exists" });
-            }
-
-            _context.Users.Add(user);
-            _context.SaveChanges();
-
-            return Ok(new { message = "User registered successfully" });
+            var result = _authManager.Register(user);
+            return ToActionResult(result);
         }
 
         // ---------------- LOGIN (JWT REAL) ----------------
         [HttpPost("login")]
         public IActionResult Login([FromBody] LoginRequest login)
         {
-            // Validate login input
-            var (isValid, errors) = UserValidator.ValidateLogin(login);
-            if (!isValid)
-            {
-                return BadRequest(new { message = "Validation failed", errors });
-            }
+            var result = _authManager.Login(login);
+            return ToActionResult(result);
+        }
 
-            var user = _context.Users
-                .FirstOrDefault(u => u.Username == login.Username && u.Password == login.Password);
+        private IActionResult ToActionResult(ServiceResult<object?> result)
+        {
+            var payload = result.Errors?.Length > 0
+                ? new { message = result.Message, errors = result.Errors }
+                : result.Data ?? new { message = result.Message };
 
-            if (user == null)
+            return result.StatusCode switch
             {
-                return Unauthorized(new { message = "Invalid credentials" });
-            }
-
-            var claims = new[]
-            {
-                new Claim(ClaimTypes.Name, user.Username)
+                200 => Ok(payload),
+                400 => BadRequest(payload),
+                401 => Unauthorized(payload),
+                403 => StatusCode(403, payload),
+                404 => NotFound(payload),
+                _ => StatusCode(result.StatusCode, payload)
             };
+        }
 
-            var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes("THIS_IS_MY_SUPER_SECRET_KEY_12345"));
+        private IActionResult ToActionResult(ServiceResult<LoginResponse> result)
+        {
+            var payload = result.Errors?.Length > 0
+                ? new { message = result.Message, errors = result.Errors }
+                : result.Data ?? new { message = result.Message };
 
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var token = new JwtSecurityToken(
-                issuer: "DogQueueApi",
-                audience: "DogQueueApi",
-                claims: claims,
-                expires: DateTime.Now.AddHours(2),
-                signingCredentials: creds
-            );
-
-            var jwt = new JwtSecurityTokenHandler().WriteToken(token);
-
-            return Ok(new
+            return result.StatusCode switch
             {
-                token = jwt,
-                username = user.Username,
-                fullname = user.FullName
-            });
+                200 => Ok(payload),
+                400 => BadRequest(payload),
+                401 => Unauthorized(payload),
+                403 => StatusCode(403, payload),
+                404 => NotFound(payload),
+                _ => StatusCode(result.StatusCode, payload)
+            };
         }
     }
 }
