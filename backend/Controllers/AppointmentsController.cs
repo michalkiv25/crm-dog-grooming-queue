@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using DogQueueApi.Data;
 using DogQueueApi.Models;
+using DogQueueApi.Validators;
 using Microsoft.AspNetCore.Authorization;
 using System.Linq;
 using Microsoft.EntityFrameworkCore;
@@ -37,6 +38,13 @@ namespace DogQueueApi.Controllers
         [HttpPost]
         public IActionResult Create([FromBody] Appointment appt)
         {
+            // Validate appointment input
+            var (isValid, errors) = AppointmentValidator.Validate(appt);
+            if (!isValid)
+            {
+                return BadRequest(new { message = "Validation failed", errors });
+            }
+
             appt.Username = User.Identity?.Name ?? appt.Username;
             appt.CalculatePriceAndDuration();
 
@@ -56,6 +64,13 @@ namespace DogQueueApi.Controllers
         [HttpPut("{id}")]
         public IActionResult Update(int id, [FromBody] Appointment updatedAppt)
         {
+            // Validate appointment input
+            var (isValid, errors) = AppointmentValidator.Validate(updatedAppt);
+            if (!isValid)
+            {
+                return BadRequest(new { message = "Validation failed", errors });
+            }
+
             var appt = _context.Appointments.FirstOrDefault(a => a.Id == id);
             if (appt == null) return NotFound();
 

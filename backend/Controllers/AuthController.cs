@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using DogQueueApi.Data;
 using DogQueueApi.Models;
+using DogQueueApi.Validators;
 using System.Linq;
 using System;
 using System.IdentityModel.Tokens.Jwt;
@@ -25,16 +26,16 @@ namespace DogQueueApi.Controllers
         [HttpPost("register")]
         public IActionResult Register([FromBody] User user)
         {
-            if (string.IsNullOrWhiteSpace(user.Username) ||
-                string.IsNullOrWhiteSpace(user.Password) ||
-                string.IsNullOrWhiteSpace(user.FullName))
+            // Validate user input
+            var (isValid, errors) = UserValidator.ValidateRegister(user);
+            if (!isValid)
             {
-                return BadRequest("All fields are required");
+                return BadRequest(new { message = "Validation failed", errors });
             }
 
             if (_context.Users.Any(u => u.Username == user.Username))
             {
-                return BadRequest("Username already exists");
+                return BadRequest(new { message = "Username already exists" });
             }
 
             _context.Users.Add(user);
@@ -45,8 +46,15 @@ namespace DogQueueApi.Controllers
 
         // ---------------- LOGIN (JWT REAL) ----------------
         [HttpPost("login")]
-        public IActionResult Login([FromBody] User login)
+        public IActionResult Login([FromBody] LoginRequest login)
         {
+            // Validate login input
+            var (isValid, errors) = UserValidator.ValidateLogin(login);
+            if (!isValid)
+            {
+                return BadRequest(new { message = "Validation failed", errors });
+            }
+
             var user = _context.Users
                 .FirstOrDefault(u => u.Username == login.Username && u.Password == login.Password);
 
