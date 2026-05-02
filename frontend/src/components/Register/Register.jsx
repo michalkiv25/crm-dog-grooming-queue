@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { authService } from "../../services/api";
 
-/** אותיות בכל שפה (כולל עברית) — בלי ספרות וסימנים */
+/** Username: Unicode letters only (no digits or punctuation). */
 const sanitizeUsernameLettersOnly = (value) =>
   value.replace(/[^\p{L}]/gu, "");
 
-/** שם מלא: אותיות, רווחים, מקף ואפוסטרופ */
+/** Full name: letters, spaces, hyphen, apostrophe. */
 const sanitizeFullNameTextOnly = (value) =>
   value.replace(/[^\p{L}\s'\-]/gu, "");
 

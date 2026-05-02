@@ -1,11 +1,11 @@
-/* כותרת */
+/* Page heading */
 h2 {
   text-align: center;
   margin-bottom: 15px;
   color: #333;
 }
 
-/* קונטיינר של כל הכרטיסים */
+/* Vertical stack of appointment cards */
 .cards-container {
   display: flex;
   flex-direction: column;
@@ -13,7 +13,7 @@ h2 {
   margin-top: 10px;
 }
 
-/* כרטיס של תור */
+/* Single appointment card */
 .card {
   background: #ffffff;
   border-radius: 12px;
@@ -23,12 +23,12 @@ h2 {
   transition: 0.2s ease-in-out;
 }
 
-/* אפקט hover */
+/* Hover feedback */
 .card:hover {
   transform: scale(1.02);
 }
 
-/* טקסט בתוך הכרטיס */
+/* Card typography */
 .card h3 {
   margin: 0 0 5px 0;
   color: #222;
