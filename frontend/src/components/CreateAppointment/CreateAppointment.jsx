@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { he } from "date-fns/locale";
 import "react-datepicker/dist/react-datepicker.css";
 import { appointmentsService } from "../../services/api";
+import { sanitizeDogNameInput } from "../../utils/inputSanitize";
 
 registerLocale("he", he);
 
@@ -25,6 +26,8 @@ export default function CreateAppointment({ onSuccess }) {
       newErrors.push("Dog name must be at least 2 characters");
     } else if (dogName.trim().length > 50) {
       newErrors.push("Dog name must not exceed 50 characters");
+    } else if (!/^[\p{L}\s'\-]+$/u.test(dogName.trim())) {
+      newErrors.push("Dog name must contain letters only");
     }
 
     if (!dogSize) {
@@ -130,8 +133,10 @@ export default function CreateAppointment({ onSuccess }) {
         Dog Name
         <input
           placeholder="Dog name"
+          inputMode="text"
+          autoComplete="off"
           value={dogName}
-          onChange={(e) => setDogName(e.target.value)}
+          onChange={(e) => setDogName(sanitizeDogNameInput(e.target.value))}
           disabled={loading}
         />
       </label>

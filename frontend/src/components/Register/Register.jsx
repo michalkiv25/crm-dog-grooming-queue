@@ -1,6 +1,14 @@
 import { useState } from "react";
 import { authService } from "../../services/api";
 
+/** אותיות בכל שפה (כולל עברית) — בלי ספרות וסימנים */
+const sanitizeUsernameLettersOnly = (value) =>
+  value.replace(/[^\p{L}]/gu, "");
+
+/** שם מלא: אותיות, רווחים, מקף ואפוסטרופ */
+const sanitizeFullNameTextOnly = (value) =>
+  value.replace(/[^\p{L}\s'\-]/gu, "");
+
 export default function Register({ onSwitchToLogin }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -17,6 +25,8 @@ export default function Register({ onSwitchToLogin }) {
       newErrors.push("Username must be at least 3 characters");
     } else if (username.trim().length > 30) {
       newErrors.push("Username must not exceed 30 characters");
+    } else if (!/^[\p{L}]+$/u.test(username.trim())) {
+      newErrors.push("Username must contain letters only");
     }
 
     if (!password.trim()) {
@@ -31,6 +41,8 @@ export default function Register({ onSwitchToLogin }) {
       newErrors.push("Full name must be at least 2 characters");
     } else if (fullName.trim().length > 100) {
       newErrors.push("Full name must not exceed 100 characters");
+    } else if (!/^[\p{L}\s'\-]+$/u.test(fullName.trim())) {
+      newErrors.push("Full name must contain letters, spaces, hyphen or apostrophe only");
     }
 
     setErrors(newErrors);
@@ -80,8 +92,10 @@ export default function Register({ onSwitchToLogin }) {
         Username
         <input
           placeholder="Username"
+          inputMode="text"
+          autoComplete="username"
           value={username}
-          onChange={(e) => setUsername(e.target.value)}
+          onChange={(e) => setUsername(sanitizeUsernameLettersOnly(e.target.value))}
           disabled={loading}
         />
       </label>
@@ -100,8 +114,10 @@ export default function Register({ onSwitchToLogin }) {
         Full Name
         <input
           placeholder="Full Name"
+          inputMode="text"
+          autoComplete="name"
           value={fullName}
-          onChange={(e) => setFullName(e.target.value)}
+          onChange={(e) => setFullName(sanitizeFullNameTextOnly(e.target.value))}
           disabled={loading}
         />
       </label>

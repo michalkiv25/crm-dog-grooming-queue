@@ -90,15 +90,17 @@ button:hover {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 16px;
   margin-bottom: 20px;
   padding: 10px 0;
   border-bottom: 2px solid var(--tan);
 }
 
-.logout-container p {
+.logout-greeting {
   margin: 0;
   font-weight: bold;
   color: var(--dark-brown);
+  text-align: right;
 }
 
 .logout-button {
@@ -382,6 +384,22 @@ button:hover {
   width: 90%;
   box-shadow: 0 10px 40px rgba(139, 69, 19, 0.3);
   border: 2px solid var(--tan);
+}
+
+.modal input,
+.modal select {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  margin: 0 0 14px 0;
+  padding: 10px;
+  border: 2px solid var(--tan);
+  border-radius: 8px;
+  background: var(--light-text);
+  color: var(--dark-text);
+  font-family: Arial, sans-serif;
 }
 
 .modal-buttons {

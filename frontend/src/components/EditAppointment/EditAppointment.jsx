@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { appointmentsService } from "../../services/api";
+import { sanitizeDogNameInput } from "../../utils/inputSanitize";
 
 export default function EditAppointment({ appointment, onSave, onCancel }) {
   const [dogName, setDogName] = useState("");
@@ -9,7 +10,7 @@ export default function EditAppointment({ appointment, onSave, onCancel }) {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    setDogName(appointment.dogName);
+    setDogName(sanitizeDogNameInput(appointment.dogName ?? ""));
     setDogSize(appointment.dogSize);
     setDate(appointment.date);
   }, [appointment]);
@@ -23,6 +24,8 @@ export default function EditAppointment({ appointment, onSave, onCancel }) {
       newErrors.push("Dog name must be at least 2 characters");
     } else if (dogName.trim().length > 50) {
       newErrors.push("Dog name must not exceed 50 characters");
+    } else if (!/^[\p{L}\s'\-]+$/u.test(dogName.trim())) {
+      newErrors.push("Dog name must contain letters only");
     }
 
     if (!dogSize) {
@@ -80,8 +83,10 @@ export default function EditAppointment({ appointment, onSave, onCancel }) {
 
         <input
           value={dogName}
-          onChange={(e) => setDogName(e.target.value)}
+          onChange={(e) => setDogName(sanitizeDogNameInput(e.target.value))}
           placeholder="Dog name"
+          inputMode="text"
+          autoComplete="off"
           disabled={loading}
         />
 

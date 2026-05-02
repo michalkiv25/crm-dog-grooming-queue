@@ -21,10 +21,13 @@ function AuthenticatedDashboard({
   return (
     <>
       <div className="logout-container">
-        <p>שלום, {localStorage.getItem("fullname") || "משתמש"}</p>
-        <button className="logout-button" type="button" onClick={onLogout}>
-          Logout
+      <button className="logout-button" type="button" onClick={onLogout}>
+          יציאה
         </button>
+        <p className="logout-greeting" dir="rtl">
+        שלום,  {localStorage.getItem("fullname") || "משתמש"}
+        </p>
+      
       </div>
       <div className="appointments-dashboard">
         <MyAppointments refreshTrigger={refreshTrigger} />

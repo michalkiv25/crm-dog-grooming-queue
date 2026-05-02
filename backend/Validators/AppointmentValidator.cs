@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
 
 namespace DogQueueApi.Validators
 {
@@ -14,6 +15,8 @@ namespace DogQueueApi.Validators
                 errors.Add("Dog name must be at least 2 characters");
             else if (appointment.DogName.Length > 50)
                 errors.Add("Dog name must not exceed 50 characters");
+            else if (!Regex.IsMatch(appointment.DogName.Trim(), @"^[\p{L}\s'\-]+$", RegexOptions.None, TimeSpan.FromSeconds(1)))
+                errors.Add("Dog name must contain letters, spaces, hyphen or apostrophe only");
 
             if (string.IsNullOrWhiteSpace(appointment.DogSize))
                 errors.Add("Dog size is required");
@@ -41,6 +44,8 @@ namespace DogQueueApi.Validators
                 errors.Add("Username must be at least 3 characters");
             else if (user.Username.Length > 30)
                 errors.Add("Username must not exceed 30 characters");
+            else if (!Regex.IsMatch(user.Username.Trim(), @"^[\p{L}]+$", RegexOptions.None, TimeSpan.FromSeconds(1)))
+                errors.Add("Username must contain letters only");
 
             if (string.IsNullOrWhiteSpace(user.Password))
                 errors.Add("Password is required");
@@ -53,6 +58,8 @@ namespace DogQueueApi.Validators
                 errors.Add("Full name must be at least 2 characters");
             else if (user.FullName.Length > 100)
                 errors.Add("Full name must not exceed 100 characters");
+            else if (!Regex.IsMatch(user.FullName.Trim(), @"^[\p{L}\s'\-]+$", RegexOptions.None, TimeSpan.FromSeconds(1)))
+                errors.Add("Full name must contain letters, spaces, hyphen or apostrophe only");
 
             return (errors.Count == 0, errors.ToArray());
         }
