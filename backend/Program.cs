@@ -8,6 +8,7 @@ using DogQueueApi.Interfaces.Providers;
 using DogQueueApi.Managers;
 using DogQueueApi.Providers;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using DogQueueApi.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -21,19 +22,12 @@ if (!string.IsNullOrWhiteSpace(portEnv))
 
 builder.Services.AddControllers();
 
-builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
-builder.Services.PostConfigure<JwtSettings>(JwtSettings.OverwriteSecretFromEnvironment);
-
-var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
-JwtSettings.OverwriteSecretFromEnvironment(jwtSettings);
-if (string.IsNullOrWhiteSpace(jwtSettings.SecretKey) || jwtSettings.SecretKey.Length < 32)
-{
-    throw new InvalidOperationException(
-        "Jwt:SecretKey is missing or shorter than 32 characters. " +
-        "Local: use appsettings.Development.json. Render: Dashboard → Web Service → Environment → add " +
-        "Key Jwt__SecretKey (two underscores) with a random value of at least 32 characters, " +
-        "or Key JWT_SECRET with the same. Then redeploy.");
-}
+// Bind Jwt from configuration, then fix SecretKey: empty Jwt__SecretKey in the environment overrides JSON in
+// IConfiguration and breaks Render — ResolveJwtSecret reads appsettings.Production.json from disk if needed.
+var jwtSettings = new JwtSettings();
+builder.Configuration.GetSection(JwtSettings.SectionName).Bind(jwtSettings);
+JwtSettings.ResolveJwtSecret(jwtSettings, builder.Environment.ContentRootPath);
+builder.Services.AddSingleton<IOptions<JwtSettings>>(_ => Options.Create(jwtSettings));
 
 // LocalDB is Windows-only; using it on Linux (e.g. Render with wrong ASPNETCORE_ENVIRONMENT) often crashes the process (exit 139).
 var connProbe = builder.Configuration.GetConnectionString("DefaultConnection");
