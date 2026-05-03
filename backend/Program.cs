@@ -12,6 +12,13 @@ using DogQueueApi.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Render / Fly.io / Railway set PORT; the process must listen on 0.0.0.0, not localhost-only.
+var portEnv = Environment.GetEnvironmentVariable("PORT");
+if (!string.IsNullOrWhiteSpace(portEnv))
+{
+    builder.WebHost.UseUrls($"http://0.0.0.0:{portEnv.Trim()}");
+}
+
 builder.Services.AddControllers();
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
