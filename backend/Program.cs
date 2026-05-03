@@ -30,6 +30,18 @@ if (string.IsNullOrWhiteSpace(jwtSettings.SecretKey) || jwtSettings.SecretKey.Le
         "For local development use appsettings.Development.json; for production set environment variable Jwt__SecretKey.");
 }
 
+// LocalDB is Windows-only; using it on Linux (e.g. Render with wrong ASPNETCORE_ENVIRONMENT) often crashes the process (exit 139).
+var connProbe = builder.Configuration.GetConnectionString("DefaultConnection");
+if (OperatingSystem.IsLinux() &&
+    !string.IsNullOrWhiteSpace(connProbe) &&
+    connProbe.Contains("localdb", StringComparison.OrdinalIgnoreCase) &&
+    !connProbe.Trim().StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
+{
+    throw new InvalidOperationException(
+        "Linux cannot use SQL Server LocalDB. Set ASPNETCORE_ENVIRONMENT=Production (Dockerfile does this) " +
+        "or set ConnectionStrings__DefaultConnection to SQLite (Data Source=...) or a real SQL Server host.");
+}
+
 var defaultConnection = builder.Configuration.GetConnectionString("DefaultConnection");
 if (!string.IsNullOrWhiteSpace(defaultConnection) &&
     defaultConnection.Trim().StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
