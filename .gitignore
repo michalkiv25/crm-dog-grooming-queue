@@ -1,9 +1,23 @@
+# Build outputs (.NET)
+**/bin/
+**/obj/
+
+# Frontend
+**/node_modules/
+**/dist/
+
+# SQLite (local / ephemeral)
 *.db
 *.db-shm
 *.db-wal
-bin/
-obj/
-node_modules/
-dist/
+
+# IDE / OS
 .vscode/
 .DS_Store
+**/.DS_Store
+Thumbs.db
+
+# Local debug captures (do not commit)
+appt_resp.txt
+login_resp.json
+*_resp.txt
