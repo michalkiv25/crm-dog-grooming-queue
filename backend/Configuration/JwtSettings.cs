@@ -18,4 +18,16 @@ public class JwtSettings
     public string Audience { get; set; } = "DogQueueApi";
 
     public int ExpiryHours { get; set; } = 2;
+
+    /// <summary>
+    /// Render and other hosts sometimes expose secrets only as raw env vars.
+    /// Supports <c>Jwt__SecretKey</c> (ASP.NET Core convention) and <c>JWT_SECRET</c> (common in tutorials).
+    /// </summary>
+    public static void OverwriteSecretFromEnvironment(JwtSettings settings)
+    {
+        var v = Environment.GetEnvironmentVariable("Jwt__SecretKey")?.Trim()
+            ?? Environment.GetEnvironmentVariable("JWT_SECRET")?.Trim();
+        if (!string.IsNullOrWhiteSpace(v))
+            settings.SecretKey = v;
+    }
 }

@@ -22,12 +22,17 @@ if (!string.IsNullOrWhiteSpace(portEnv))
 builder.Services.AddControllers();
 
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection(JwtSettings.SectionName));
+builder.Services.PostConfigure<JwtSettings>(JwtSettings.OverwriteSecretFromEnvironment);
+
 var jwtSettings = builder.Configuration.GetSection(JwtSettings.SectionName).Get<JwtSettings>() ?? new JwtSettings();
+JwtSettings.OverwriteSecretFromEnvironment(jwtSettings);
 if (string.IsNullOrWhiteSpace(jwtSettings.SecretKey) || jwtSettings.SecretKey.Length < 32)
 {
     throw new InvalidOperationException(
         "Jwt:SecretKey is missing or shorter than 32 characters. " +
-        "For local development use appsettings.Development.json; for production set environment variable Jwt__SecretKey.");
+        "Local: use appsettings.Development.json. Render: Dashboard → Web Service → Environment → add " +
+        "Key Jwt__SecretKey (two underscores) with a random value of at least 32 characters, " +
+        "or Key JWT_SECRET with the same. Then redeploy.");
 }
 
 // LocalDB is Windows-only; using it on Linux (e.g. Render with wrong ASPNETCORE_ENVIRONMENT) often crashes the process (exit 139).
