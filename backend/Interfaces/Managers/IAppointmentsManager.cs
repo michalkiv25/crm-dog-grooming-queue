@@ -10,5 +10,10 @@ namespace DogQueueApi.Interfaces.Managers
         ServiceResult<Appointment> Update(string username, int id, Appointment updatedAppointment);
         ServiceResult<object?> Delete(string username, int id);
         ServiceResult<List<Appointment>> GetFiltered(string username, DateTime? date, string? customerName);
+
+        ServiceResult<LoyaltyBookingPreview> GetLoyaltyBookingPreview(string? username);
+
+        /// <summary>All customers’ appointments from now onward (salon-wide queue). Edit/delete still enforced per-user on PUT/DELETE.</summary>
+        ServiceResult<List<Appointment>> GetUpcomingQueue();
     }
 }

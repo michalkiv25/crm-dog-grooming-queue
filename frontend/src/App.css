@@ -204,6 +204,24 @@ button:hover {
   color: var(--dark-brown);
 }
 
+.auth-card h3 {
+  margin-top: 0;
+  margin-bottom: 12px;
+  font-size: 1.35rem;
+  color: var(--dark-brown);
+}
+
+.loyalty-discount-note {
+  margin: 0 0 18px 0;
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: var(--dark-text);
+  padding: 12px 14px;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 10px;
+  border: 1px solid var(--tan);
+}
+
 .auth-card label {
   display: block;
   margin-bottom: 22px;
@@ -316,6 +334,7 @@ button:hover {
   background: linear-gradient(135deg, var(--cream) 0%, var(--beige) 100%);
   cursor: pointer;
   transition: 0.2s;
+  margin-top: 7px;
 }
 
 .card:hover {

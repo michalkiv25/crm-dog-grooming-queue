@@ -1,4 +1,5 @@
 using DogQueueApi.Data;
+using DogQueueApi.Infrastructure;
 using DogQueueApi.Interfaces.Managers;
 using DogQueueApi.Interfaces.Providers;
 using DogQueueApi.Models;
@@ -21,6 +22,8 @@ namespace DogQueueApi.Managers
 
         public ServiceResult<object?> Register(User user)
         {
+            user.Username = UsernameNormalizer.Canonical(user.Username);
+
             var (isValid, errors) = UserValidator.ValidateRegister(user);
             if (!isValid)
             {
@@ -46,8 +49,9 @@ namespace DogQueueApi.Managers
                 return ServiceResult<LoginResponse>.BadRequest("Validation failed", errors);
             }
 
+            var loginName = UsernameNormalizer.Canonical(login.Username);
             var user = _context.Users
-                .FirstOrDefault(u => u.Username == login.Username && u.Password == login.Password);
+                .FirstOrDefault(u => u.Username == loginName && u.Password == login.Password);
 
             if (user == null)
             {

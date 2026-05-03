@@ -1,3 +1,4 @@
+using DogQueueApi.Infrastructure;
 using DogQueueApi.Interfaces.Providers;
 using System.Security.Claims;
 
@@ -7,10 +8,11 @@ namespace DogQueueApi.Providers
     {
         public string? GetUsername(ClaimsPrincipal user)
         {
-            return user.Identity?.Name
+            var name = user.Identity?.Name
                 ?? user.FindFirstValue(ClaimTypes.Name)
                 ?? user.FindFirstValue("username")
                 ?? user.FindFirstValue(ClaimTypes.NameIdentifier);
+            return string.IsNullOrWhiteSpace(name) ? null : UsernameNormalizer.Canonical(name);
         }
     }
 }

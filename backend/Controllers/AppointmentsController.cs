@@ -34,6 +34,34 @@ namespace DogQueueApi.Controllers
             return ToActionResult(result);
         }
 
+        /// <summary>
+        /// Lets the client show loyalty pricing on the create-appointment screen before submit (same rules as POST create).
+        /// </summary>
+        [Authorize]
+        [HttpGet("loyalty-preview")]
+        public IActionResult GetLoyaltyBookingPreview()
+        {
+            var username = _currentUserProvider.GetUsername(User);
+            if (string.IsNullOrWhiteSpace(username))
+                return Unauthorized(new { message = "Invalid token" });
+
+            var result = _appointmentsManager.GetLoyaltyBookingPreview(username);
+            return ToActionResult(result);
+        }
+
+        /// <summary>All upcoming appointments (every customer). Users may only edit/delete their own rows via existing PUT/DELETE.</summary>
+        [Authorize]
+        [HttpGet("upcoming-queue")]
+        public IActionResult GetUpcomingQueue()
+        {
+            var username = _currentUserProvider.GetUsername(User);
+            if (string.IsNullOrWhiteSpace(username))
+                return Unauthorized(new { message = "Invalid token" });
+
+            var result = _appointmentsManager.GetUpcomingQueue();
+            return ToActionResult(result);
+        }
+
         [Authorize]
         [HttpPost]
         public IActionResult Create([FromBody] Appointment appt)
@@ -47,7 +75,7 @@ namespace DogQueueApi.Controllers
         }
 
         [Authorize]
-        [HttpPut("{id}")]
+        [HttpPut("{id:int}")]
         public IActionResult Update(int id, [FromBody] Appointment updatedAppt)
         {
             var username = _currentUserProvider.GetUsername(User);
@@ -59,7 +87,7 @@ namespace DogQueueApi.Controllers
         }
 
         [Authorize]
-        [HttpDelete("{id}")]
+        [HttpDelete("{id:int}")]
         public IActionResult Delete(int id)
         {
             var username = _currentUserProvider.GetUsername(User);

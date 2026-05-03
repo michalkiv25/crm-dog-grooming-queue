@@ -12,21 +12,54 @@ public static class SqliteSchemaFixer
 {
     public static void Apply(AppDbContext db)
     {
-        if (db.Database.ProviderName is not "Microsoft.EntityFrameworkCore.Sqlite")
-            return;
-
-        db.Database.OpenConnection();
-        try
+        if (db.Database.ProviderName is "Microsoft.EntityFrameworkCore.Sqlite")
         {
-            var connection = db.Database.GetDbConnection();
+            db.Database.OpenConnection();
+            try
+            {
+                var connection = db.Database.GetDbConnection();
 
-            EnsureUsersTable(db, connection);
-            EnsureAppointmentsTable(db, connection);
+                EnsureUsersTable(db, connection);
+                EnsureAppointmentsTable(db, connection);
+            }
+            finally
+            {
+                db.Database.CloseConnection();
+            }
         }
-        finally
+
+        NormalizeStoredUsernames(db);
+    }
+
+    /// <summary>
+    /// Align legacy rows so Username matches the canonical form used on register/login (trim + lowercase).
+    /// Runs on every startup; updates only rows that differ.
+    /// </summary>
+    private static void NormalizeStoredUsernames(AppDbContext db)
+    {
+        var changed = false;
+        foreach (var u in db.Users.ToList())
         {
-            db.Database.CloseConnection();
+            var c = UsernameNormalizer.Canonical(u.Username);
+            if (u.Username != c)
+            {
+                u.Username = c;
+                changed = true;
+            }
         }
+
+        foreach (var a in db.Appointments.ToList())
+        {
+            var c = UsernameNormalizer.Canonical(a.Username);
+            if (a.Username != c)
+            {
+                a.Username = c;
+                changed = true;
+            }
+        }
+
+        if (changed)
+            db.SaveChanges();
     }
 
     private static HashSet<string> GetColumnNames(System.Data.Common.DbConnection connection, string table)

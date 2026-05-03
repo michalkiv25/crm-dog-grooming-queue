@@ -1,5 +1,9 @@
-// Centralized API service for all backend calls
-const API_BASE_URL = "http://localhost:5285/api";
+// Centralized API service for all backend calls.
+// Local: default below. Production (e.g. Render): set VITE_API_URL to API origin without trailing slash (https://your-api.onrender.com).
+const API_ORIGIN =
+  import.meta.env.VITE_API_URL?.trim().replace(/\/$/, "") ||
+  "http://localhost:5285";
+const API_BASE_URL = `${API_ORIGIN}/api`;
 const REQUEST_TIMEOUT_MS = 8000;
 
 // Helper function to get auth token
@@ -82,6 +86,16 @@ export const authService = {
 export const appointmentsService = {
   async getAll() {
     return apiCall("/appointments");
+  },
+
+  /** Same loyalty rules as POST /appointments — for showing price before submit */
+  async loyaltyPreview() {
+    return apiCall("/appointments/loyalty-preview");
+  },
+
+  /** All customers’ future appointments (salon queue) */
+  async upcomingQueue() {
+    return apiCall("/appointments/upcoming-queue");
   },
 
   async create(dogName, dogSize, date) {

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { format } from "date-fns";
-import { he } from "date-fns/locale";
+import { enUS } from "date-fns/locale/en-US";
 import "react-datepicker/dist/react-datepicker.css";
 import { appointmentsService } from "../../services/api";
 import { sanitizeDogNameInput } from "../../utils/inputSanitize";
 
-registerLocale("he", he);
+registerLocale("enUS", enUS);
 
 export default function CreateAppointment({ onSuccess }) {
   const [dogName, setDogName] = useState("");
@@ -93,11 +93,11 @@ export default function CreateAppointment({ onSuccess }) {
 
   const applyPickerSelection = () => {
     if (!modalSelected) {
-      setErrors(["נא לבחור תאריך ושעה"]);
+      setErrors(["Please choose a date and time"]);
       return;
     }
     if (modalSelected.getTime() <= Date.now()) {
-      setErrors(["נא לבחור תאריך ושעה בעתיד"]);
+      setErrors(["Please choose a future date and time"]);
       return;
     }
     setAppointmentDateTime(format(modalSelected, "yyyy-MM-dd'T'HH:mm:ss"));
@@ -106,7 +106,7 @@ export default function CreateAppointment({ onSuccess }) {
   };
 
   const appointmentDisplayValue = appointmentDateTime
-    ? new Date(appointmentDateTime).toLocaleString("he-IL", {
+    ? new Date(appointmentDateTime).toLocaleString("en-US", {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
@@ -118,6 +118,10 @@ export default function CreateAppointment({ onSuccess }) {
   return (
     <div className="auth-card">
       <h3>Create Appointment 🐶</h3>
+      <p className="loyalty-discount-note" dir="ltr">
+        Loyalty pricing (10% off from your fourth booking onward) is calculated automatically
+        when you submit — see <strong>My Appointments</strong> for the stored price.
+      </p>
 
       {errors.length > 0 && (
         <div className="error-box">
@@ -158,7 +162,7 @@ export default function CreateAppointment({ onSuccess }) {
           type="text"
           value={appointmentDisplayValue}
           readOnly
-          placeholder="לחצו לפתיחת יומן"
+          placeholder="Click to open calendar"
           onClick={openDateTimePicker}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
@@ -183,8 +187,8 @@ export default function CreateAppointment({ onSuccess }) {
           aria-modal="true"
           aria-labelledby="appointment-picker-title"
         >
-          <div className="modal modal--datepicker appointment-modal" dir="rtl">
-            <h3 id="appointment-picker-title">בחרו תאריך ושעה</h3>
+          <div className="modal modal--datepicker appointment-modal">
+            <h3 id="appointment-picker-title">Choose date and time</h3>
 
             <div className="appointment-datepicker-wrap">
               <DatePicker
@@ -193,9 +197,9 @@ export default function CreateAppointment({ onSuccess }) {
                 onChange={(date) => setModalSelected(date)}
                 showTimeSelect
                 timeIntervals={15}
-                timeCaption="שעה"
+                timeCaption="Time"
                 dateFormat="Pp"
-                locale="he"
+                locale="enUS"
                 minDate={new Date()}
                 filterTime={filterPassedTime}
                 calendarClassName="appointment-calendar-inner"

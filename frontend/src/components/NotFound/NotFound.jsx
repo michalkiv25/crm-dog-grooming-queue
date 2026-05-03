@@ -6,9 +6,9 @@ export default function NotFound({ fallbackPath = "/" }) {
       <div className="not-found-card">
         <div className="not-found-inner">
           <h1>404</h1>
-          <p>העמוד שחיפשת לא נמצא.</p>
+          <p>The page you requested was not found.</p>
           <Link className="primary-button not-found-link" to={fallbackPath}>
-            חזרה לעמוד הראשי
+            Back to home
           </Link>
         </div>
       </div>

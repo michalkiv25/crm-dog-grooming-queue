@@ -1,14 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../../services/api";
 
-export default function Login({ onLogin, onSwitchToRegister }) {
+export default function Login({
+  onLogin,
+  onSwitchToRegister,
+  defaultUsername = "",
+}) {
   const navigate = useNavigate();
 
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState(defaultUsername);
   const [password, setPassword] = useState("");
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    setUsername(defaultUsername);
+  }, [defaultUsername]);
 
   const validateInput = () => {
     const newErrors = [];
@@ -36,7 +44,10 @@ export default function Login({ onLogin, onSwitchToRegister }) {
 
       if (ok && data?.token) {
         localStorage.setItem("token", data.token);
-        localStorage.setItem("fullname", data.fullname);
+        localStorage.setItem("fullname", data.fullname ?? "");
+        if (data.username != null) {
+          localStorage.setItem("username", String(data.username).trim());
+        }
         onLogin?.(data.token);
         navigate("/appointments");
       } else {
@@ -90,13 +101,13 @@ export default function Login({ onLogin, onSwitchToRegister }) {
       </button>
 
       <p className="auth-switch-text">
-        אין לך חשבון?{" "}
+        Don&apos;t have an account?{" "}
         <button
           type="button"
           className="auth-link-button"
           onClick={() => onSwitchToRegister?.()}
         >
-          להרשמה
+          Register
         </button>
       </p>
     </div>

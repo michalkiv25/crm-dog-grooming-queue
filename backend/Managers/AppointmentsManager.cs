@@ -1,4 +1,6 @@
+using System;
 using DogQueueApi.Data;
+using DogQueueApi.Infrastructure;
 using DogQueueApi.Interfaces.Managers;
 using DogQueueApi.Models;
 using DogQueueApi.Services;
@@ -9,6 +11,13 @@ namespace DogQueueApi.Managers
 {
     public class AppointmentsManager : IAppointmentsManager
     {
+        /// <summary>
+        /// Loyalty: first three bookings (indices 0–2 by ascending Id) pay full catalog; index 3+ get 10% off.
+        /// If the customer deletes down to three (or fewer), all remaining rows are repriced to full catalog.
+        /// Enforced in <see cref="ReapplyLoyaltyPricesForUser"/> after create, update, and delete.
+        /// </summary>
+        private const int FullPriceBookingSlotCount = 3;
+
         private readonly AppDbContext _context;
 
         public AppointmentsManager(AppDbContext context)
@@ -18,16 +27,14 @@ namespace DogQueueApi.Managers
 
         public ServiceResult<List<Appointment>> GetAll(string username)
         {
-            var appointments = _context.Appointments
-                .Where(a => a.Username == username)
-                .ToList();
+            var appointments = AppointmentsForUser(username).ToList();
 
             return ServiceResult<List<Appointment>>.Ok(appointments);
         }
 
         public ServiceResult<Appointment> Create(string username, Appointment appointment)
         {
-            appointment.Username = username;
+            appointment.Username = UsernameNormalizer.Canonical(username);
 
             var (isValid, errors) = AppointmentValidator.Validate(appointment);
             if (!isValid)
@@ -35,15 +42,18 @@ namespace DogQueueApi.Managers
                 return ServiceResult<Appointment>.BadRequest("Validation failed", errors);
             }
 
-            appointment.CalculatePriceAndDuration();
+            appointment.CreatedAt = DateTime.Now;
 
-            var discount = GetLoyaltyDiscountRate(appointment.Username);
-            appointment.Price *= (1 - discount);
+            appointment.CalculatePriceAndDuration();
 
             _context.Appointments.Add(appointment);
             _context.SaveChanges();
 
-            return ServiceResult<Appointment>.Ok(appointment);
+            ReapplyLoyaltyPricesForUser(appointment.Username);
+
+            var createdId = appointment.Id;
+            var fresh = _context.Appointments.AsNoTracking().First(a => a.Id == createdId);
+            return ServiceResult<Appointment>.Ok(fresh);
         }
 
         public ServiceResult<Appointment> Update(string username, int id, Appointment updatedAppointment)
@@ -54,7 +64,7 @@ namespace DogQueueApi.Managers
                 return ServiceResult<Appointment>.NotFound();
             }
 
-            if (appointment.Username != username)
+            if (!UsernameEquals(appointment.Username, username))
             {
                 return ServiceResult<Appointment>.Forbid();
             }
@@ -71,22 +81,57 @@ namespace DogQueueApi.Managers
             appointment.Date = updatedAppointment.Date;
             appointment.CalculatePriceAndDuration();
 
-            var discount = GetLoyaltyDiscountRate(appointment.Username);
-            appointment.Price *= (1 - discount);
-
             _context.SaveChanges();
-            return ServiceResult<Appointment>.Ok(appointment);
+
+            ReapplyLoyaltyPricesForUser(appointment.Username);
+
+            var fresh = _context.Appointments.AsNoTracking().First(a => a.Id == id);
+            return ServiceResult<Appointment>.Ok(fresh);
         }
 
         /// <summary>
-        /// Same logic as sp_GetUserDiscount: 10% when user already has more than 3 appointments.
-        /// Works with SQLite and SQL Server (no stored procedure required).
+        /// Re-price every row for the user: slots 0–2 full catalog, slot 3+ 10% off (by ascending Id = booking order).
+        /// Called after create, update, and delete so prices never depend on “how many others exist” on a single row.
+        /// Uses SQL UPDATE so SQLite always persists new prices (tracked SaveChanges was flaky after deletes).
         /// </summary>
-        private decimal GetLoyaltyDiscountRate(string username)
+        private void ReapplyLoyaltyPricesForUser(string canonicalUsername)
         {
-            var count = _context.Appointments.Count(a => a.Username == username);
-            return count > 3 ? 0.10m : 0m;
+            var key = UsernameNormalizer.Canonical(canonicalUsername);
+            var rows = _context.Appointments
+                .AsNoTracking()
+                .Where(a => a.Username == key)
+                .OrderBy(a => a.Id)
+                .ToList();
+
+            // Index i by ascending Id: i &lt; 3 full catalog, i ≥ 3 loyalty (fourth booking onward).
+            for (var i = 0; i < rows.Count; i++)
+            {
+                var row = rows[i];
+                var scratch = new Appointment { DogSize = row.DogSize };
+                scratch.CalculatePriceAndDuration();
+
+                var discount = i < FullPriceBookingSlotCount ? 0m : 0.10m;
+                var newPrice = decimal.Round(
+                    scratch.Price * (1 - discount),
+                    2,
+                    MidpointRounding.AwayFromZero);
+
+                _context.Database.ExecuteSqlInterpolated(
+                    $@"UPDATE ""Appointments"" SET ""Price"" = {newPrice}, ""DurationMinutes"" = {scratch.DurationMinutes} WHERE ""Id"" = {row.Id}");
+            }
         }
+
+        /// <summary>
+        /// Match appointments by canonical username (same value stored on create).
+        /// </summary>
+        private IQueryable<Appointment> AppointmentsForUser(string? username)
+        {
+            var key = UsernameNormalizer.Canonical(username);
+            return _context.Appointments.Where(a => a.Username == key);
+        }
+
+        private static bool UsernameEquals(string stored, string? fromToken) =>
+            UsernameNormalizer.Canonical(stored) == UsernameNormalizer.Canonical(fromToken);
 
         public ServiceResult<object?> Delete(string username, int id)
         {
@@ -96,7 +141,7 @@ namespace DogQueueApi.Managers
                 return ServiceResult<object?>.NotFound();
             }
 
-            if (appointment.Username != username)
+            if (!UsernameEquals(appointment.Username, username))
             {
                 return ServiceResult<object?>.Forbid();
             }
@@ -106,14 +151,16 @@ namespace DogQueueApi.Managers
                 return ServiceResult<object?>.BadRequest("Cannot delete appointments for today");
             }
 
+            var owner = appointment.Username;
             _context.Appointments.Remove(appointment);
             _context.SaveChanges();
+            ReapplyLoyaltyPricesForUser(owner);
             return ServiceResult<object?>.Ok(null);
         }
 
         public ServiceResult<List<Appointment>> GetFiltered(string username, DateTime? date, string? customerName)
         {
-            var query = _context.Appointments.Where(a => a.Username == username);
+            var query = AppointmentsForUser(username);
 
             if (date.HasValue)
             {
@@ -126,6 +173,33 @@ namespace DogQueueApi.Managers
             }
 
             return ServiceResult<List<Appointment>>.Ok(query.ToList());
+        }
+
+        public ServiceResult<LoyaltyBookingPreview> GetLoyaltyBookingPreview(string? username)
+        {
+            var count = AppointmentsForUser(username).Count();
+            var discountPercent = count >= FullPriceBookingSlotCount ? 10 : 0;
+
+            return ServiceResult<LoyaltyBookingPreview>.Ok(new LoyaltyBookingPreview
+            {
+                AppointmentCount = count,
+                NextBookingDiscountPercent = discountPercent
+            });
+        }
+
+        public ServiceResult<List<Appointment>> GetUpcomingQueue()
+        {
+            // Align with AppointmentValidator (uses DateTime.Now). UtcNow alone often excludes
+            // valid “future” rows when JSON binds local wall-clock times without timezone.
+            var now = DateTime.Now.AddMinutes(-1);
+            var list = _context.Appointments
+                .AsNoTracking()
+                .Where(a => a.Date >= now)
+                .OrderBy(a => a.Date)
+                .ThenBy(a => a.Id)
+                .ToList();
+
+            return ServiceResult<List<Appointment>>.Ok(list);
         }
     }
 }

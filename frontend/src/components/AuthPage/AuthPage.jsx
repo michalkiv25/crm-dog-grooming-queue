@@ -14,7 +14,7 @@ export default function AuthPage({ setPage }) {
         <h2>🔐 Login</h2>
         <Login setPage={setPage} />
         <p onClick={() => setIsLogin(false)} className="switch">
-          אין לך משתמש? הירשם
+          No account? Register
         </p>
       </div>
 
@@ -23,7 +23,7 @@ export default function AuthPage({ setPage }) {
         <h2>📝 Register</h2>
         <Register setPage={setPage} />
         <p onClick={() => setIsLogin(true)} className="switch">
-          כבר רשום? התחבר
+          Already registered? Log in
         </p>
       </div>
 

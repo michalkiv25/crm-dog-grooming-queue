@@ -11,36 +11,14 @@ import Login from "./components/Login/Login";
 import Register from "./components/Register/Register";
 import MyAppointments from "./components/MyAppointments/MyAppointments";
 import CreateAppointment from "./components/CreateAppointment/CreateAppointment";
+import AuthenticatedChrome from "./components/layout/AuthenticatedChrome";
 import NotFound from "./components/NotFound/NotFound";
-
-function AuthenticatedDashboard({
-  refreshTrigger,
-  onRefreshAppointments,
-  onLogout,
-}) {
-  return (
-    <>
-      <div className="logout-container">
-      <button className="logout-button" type="button" onClick={onLogout}>
-          יציאה
-        </button>
-        <p className="logout-greeting" dir="rtl">
-        שלום,  {localStorage.getItem("fullname") || "משתמש"}
-        </p>
-      
-      </div>
-      <div className="appointments-dashboard">
-        <MyAppointments refreshTrigger={refreshTrigger} />
-        <CreateAppointment onSuccess={onRefreshAppointments} />
-      </div>
-    </>
-  );
-}
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [authMode, setAuthMode] = useState("login");
+  const [loginPrefillUsername, setLoginPrefillUsername] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
   const isKnownRoute =
@@ -84,19 +62,19 @@ function App() {
   const handleLogout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("fullname");
+    localStorage.removeItem("username");
     setToken(null);
     navigate("/");
   };
 
-  const dashboard = token ? (
-    <AuthenticatedDashboard
-      refreshTrigger={refreshTrigger}
-      onRefreshAppointments={() =>
-        setRefreshTrigger((prev) => prev + 1)
-      }
-      onLogout={handleLogout}
-    />
-  ) : null;
+  const bumpRefresh = () => setRefreshTrigger((prev) => prev + 1);
+
+  const authWall = (children) =>
+    token ? (
+      <AuthenticatedChrome onLogout={handleLogout}>{children}</AuthenticatedChrome>
+    ) : (
+      <Navigate to="/" replace />
+    );
 
   return (
     <div className={`container ${isKnownRoute ? "" : "container-plain"}`}>
@@ -124,11 +102,24 @@ function App() {
                 <section className="auth-grid">
                   {authMode === "login" ? (
                     <Login
+                      defaultUsername={loginPrefillUsername}
                       onLogin={(nextToken) => setToken(nextToken)}
-                      onSwitchToRegister={() => setAuthMode("register")}
+                      onSwitchToRegister={() => {
+                        setLoginPrefillUsername("");
+                        setAuthMode("register");
+                      }}
                     />
                   ) : (
-                    <Register onSwitchToLogin={() => setAuthMode("login")} />
+                    <Register
+                      onSwitchToLogin={(registeredUsername) => {
+                        setLoginPrefillUsername(
+                          typeof registeredUsername === "string"
+                            ? registeredUsername
+                            : ""
+                        );
+                        setAuthMode("login");
+                      }}
+                    />
                   )}
                 </section>
               </main>
@@ -138,13 +129,12 @@ function App() {
 
         <Route
           path="/appointments"
-          element={
-            token ? (
-              dashboard
-            ) : (
-              <Navigate to="/" replace />
-            )
-          }
+          element={authWall(
+            <div className="appointments-dashboard">
+              <MyAppointments refreshTrigger={refreshTrigger} />
+              <CreateAppointment onSuccess={bumpRefresh} />
+            </div>
+          )}
         />
 
         <Route

@@ -55,14 +55,14 @@ export default function Register({ onSwitchToLogin }) {
     setLoading(true);
     try {
       const { ok, data } = await authService.register(username, password, fullName);
-      console.log("SERVER RESPONSE:", data);
 
       if (ok) {
-        alert("User registered 🎉");
+        const savedUsername = username.trim();
         setUsername("");
         setPassword("");
         setFullName("");
         setErrors([]);
+        onSwitchToLogin?.(savedUsername);
       } else {
         const errorMessage = data?.errors?.length 
           ? data.errors[0] 
@@ -127,13 +127,13 @@ export default function Register({ onSwitchToLogin }) {
       </button>
 
       <p className="auth-switch-text">
-        כבר רשום?{" "}
+        Already registered?{" "}
         <button
           type="button"
           className="auth-link-button"
           onClick={() => onSwitchToLogin?.()}
         >
-          להתחברות
+          Log in
         </button>
       </p>
     </div>
