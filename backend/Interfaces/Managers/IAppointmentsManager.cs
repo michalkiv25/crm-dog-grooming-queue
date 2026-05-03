@@ -15,5 +15,8 @@ namespace DogQueueApi.Interfaces.Managers
 
         /// <summary>All customers’ appointments from now onward (salon-wide queue). Edit/delete still enforced per-user on PUT/DELETE.</summary>
         ServiceResult<List<Appointment>> GetUpcomingQueue();
+
+        /// <summary>Same queue window as <see cref="GetUpcomingQueue"/> but rows read from SQL VIEW <c>vw_AppointmentsWithUsers</c> (includes FullName).</summary>
+        ServiceResult<List<AppointmentWithUserView>> GetUpcomingAppointmentsWithUserInfo();
     }
 }

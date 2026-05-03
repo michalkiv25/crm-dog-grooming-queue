@@ -21,6 +21,7 @@ public static class SqliteSchemaFixer
 
                 EnsureUsersTable(db, connection);
                 EnsureAppointmentsTable(db, connection);
+                EnsureAppointmentsWithUsersView(db);
             }
             finally
             {
@@ -144,5 +145,27 @@ public static class SqliteSchemaFixer
         Add("CreatedAt", """ALTER TABLE "Appointments" ADD COLUMN "CreatedAt" TEXT NOT NULL DEFAULT (datetime('now'));""");
         Add("Price", """ALTER TABLE "Appointments" ADD COLUMN "Price" REAL NOT NULL DEFAULT 0;""");
         Add("DurationMinutes", """ALTER TABLE "Appointments" ADD COLUMN "DurationMinutes" INTEGER NOT NULL DEFAULT 0;""");
+    }
+
+    /// <summary>Assignment requirement: SQL VIEW for reads — appointments joined to users (FullName).</summary>
+    private static void EnsureAppointmentsWithUsersView(AppDbContext db)
+    {
+        db.Database.ExecuteSqlRaw("""DROP VIEW IF EXISTS "vw_AppointmentsWithUsers";""");
+        db.Database.ExecuteSqlRaw(
+            """
+            CREATE VIEW "vw_AppointmentsWithUsers" AS
+            SELECT
+                a."Id",
+                a."Username",
+                u."FullName" AS FullName,
+                a."DogName",
+                a."DogSize",
+                a."Date",
+                a."CreatedAt",
+                a."Price",
+                a."DurationMinutes"
+            FROM "Appointments" AS a
+            INNER JOIN "Users" AS u ON u."Username" = a."Username";
+            """);
     }
 }

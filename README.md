@@ -110,11 +110,18 @@ Frontend runs on: `http://localhost:5173` (or next available port)
 - **Users**: id, username, password, fullname
 - **Appointments**: id, username, dogname, dogsize, date, createdAt, price, durationminutes
 
-### Stored Procedures
-- `sp_GetUserDiscount @Username` - Calculates discount based on appointment count
+### Microsoft SQL Server (assignment: procedure + VIEW in DB)
+
+- Run the API with a **SQL Server** connection string (not `Data Source=`). On Windows, use Visual Studio / Rider launch profile **`sqlserver`** (LocalDB), or copy `backend/appsettings.SqlServer.example.json` into `appsettings.Development.json`. On Mac/Linux, use Docker SQL Server — see `backend/Sql/README.md`.
+- Startup runs **`Migrate()`** then creates the VIEW + procedure via `SqlServerRoutineInstaller`.
+
+### Stored procedures (SQL Server)
+- **`dbo.sp_GetUserLoyaltyPreview @Username`** — returns `AppointmentCount` and `NextBookingDiscountPercent` (0 or 10). Created at startup by `SqlServerRoutineInstaller`; called from `GetLoyaltyBookingPreview` when the DB provider is SqlServer.
+- **SQLite:** does not support `CREATE PROCEDURE`; the same preview logic runs in C# (LINQ).
 
 ### Views
-- `vw_AppointmentsWithUsers` - Shows appointments with user full names
+- **`vw_AppointmentsWithUsers`** — appointments `INNER JOIN` users (`FullName`). Created at startup on SQLite (`SqliteSchemaFixer`) and SqlServer (`SqlServerRoutineInstaller`). Read via **`GET /api/appointments/upcoming-with-user-info`** (`AppointmentWithUserView`).
+- See `backend/Sql/README.md` for file references.
 
 ## 🎨 UI/UX
 
@@ -177,7 +184,7 @@ dog-queue-project/
 │   ├── Controllers/
 │   │   ├── AuthController.cs
 │   │   ├── AppointmentsController.cs
-│   │   └── sp_GetUserDiscount (SQL Procedure)
+│   │   └── Sql/ (VIEW + SQL Server procedure scripts)
 │   ├── Models/
 │   │   ├── User.cs
 │   │   ├── Appointment.cs

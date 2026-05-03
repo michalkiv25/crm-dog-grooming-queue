@@ -62,6 +62,21 @@ namespace DogQueueApi.Controllers
             return ToActionResult(result);
         }
 
+        /// <summary>
+        /// Salon queue from SQL VIEW <c>vw_AppointmentsWithUsers</c> (joins user full name). Same time window as upcoming-queue.
+        /// </summary>
+        [Authorize]
+        [HttpGet("upcoming-with-user-info")]
+        public IActionResult GetUpcomingWithUserInfo()
+        {
+            var username = _currentUserProvider.GetUsername(User);
+            if (string.IsNullOrWhiteSpace(username))
+                return Unauthorized(new { message = "Invalid token" });
+
+            var result = _appointmentsManager.GetUpcomingAppointmentsWithUserInfo();
+            return ToActionResult(result);
+        }
+
         [Authorize]
         [HttpPost]
         public IActionResult Create([FromBody] Appointment appt)

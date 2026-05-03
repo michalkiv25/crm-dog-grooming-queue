@@ -89,7 +89,12 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    // Migrations target SQL Server; SQLite uses SqliteSchemaFixer instead of Migrate().
+    if (!db.Database.IsSqlite())
+        db.Database.Migrate();
+
     SqliteSchemaFixer.Apply(db);
+    SqlServerRoutineInstaller.Apply(db);
 }
 
 app.UseCors("AllowReactApp");

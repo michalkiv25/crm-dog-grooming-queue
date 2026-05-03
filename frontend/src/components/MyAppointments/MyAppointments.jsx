@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import DatePicker, { registerLocale } from "react-datepicker";
+import { enUS } from "date-fns/locale/en-US";
+import "react-datepicker/dist/react-datepicker.css";
 import { appointmentsService } from "../../services/api";
 import EditAppointment from "../EditAppointment/EditAppointment";
 import {
@@ -10,6 +13,8 @@ import {
 } from "../../utils/loyaltyPrice";
 import "./MyAppointments.css";
 
+registerLocale("enUS", enUS);
+
 function canonicalUser(u) {
   return String(u ?? "").trim().toLowerCase();
 }
@@ -19,7 +24,10 @@ export default function MyAppointments({ refreshTrigger }) {
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
-  const [filterDate, setFilterDate] = useState("");
+  /** Show appointments starting at or after this local date-time (from calendar picker). */
+  const [filterFromDateTime, setFilterFromDateTime] = useState(null);
+  const [filterPickerOpen, setFilterPickerOpen] = useState(false);
+  const [filterModalSelected, setFilterModalSelected] = useState(null);
   const [filterCustomer, setFilterCustomer] = useState("");
   const [loadError, setLoadError] = useState(null);
   /** Total appointments for the logged-in user (getAll); used when slot index is unknown (stale-DB guard). */
@@ -89,14 +97,9 @@ export default function MyAppointments({ refreshTrigger }) {
 
   const appointments = useMemo(() => {
     let list = allUpcoming;
-    if (filterDate) {
-      list = list.filter((a) => {
-        const d = new Date(a.date);
-        const y = d.getFullYear();
-        const m = String(d.getMonth() + 1).padStart(2, "0");
-        const day = String(d.getDate()).padStart(2, "0");
-        return `${y}-${m}-${day}` === filterDate;
-      });
+    if (filterFromDateTime) {
+      const from = filterFromDateTime.getTime();
+      list = list.filter((a) => new Date(a.date).getTime() >= from);
     }
     if (filterCustomer.trim()) {
       const q = filterCustomer.trim().toLowerCase();
@@ -107,9 +110,36 @@ export default function MyAppointments({ refreshTrigger }) {
       );
     }
     return list;
-  }, [allUpcoming, filterDate, filterCustomer]);
+  }, [allUpcoming, filterFromDateTime, filterCustomer]);
 
   const isMine = (a) => canonicalUser(a.username) === me;
+
+  const filterPassedTime = (time) => time.getTime() > Date.now();
+
+  const filterDateTimeDisplay = filterFromDateTime
+    ? filterFromDateTime.toLocaleString("en-US", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "";
+
+  const openFilterDatePicker = () => {
+    setFilterModalSelected(
+      filterFromDateTime ? new Date(filterFromDateTime.getTime()) : new Date()
+    );
+    setFilterPickerOpen(true);
+  };
+
+  const applyFilterDatePicker = () => {
+    if (!filterModalSelected) return;
+    setFilterFromDateTime(new Date(filterModalSelected.getTime()));
+    setFilterPickerOpen(false);
+  };
+
+  const hasActiveFilters = Boolean(filterFromDateTime) || filterCustomer.trim().length > 0;
 
   const loyaltyCtx = (a) => {
     const mine = isMine(a);
@@ -221,12 +251,26 @@ export default function MyAppointments({ refreshTrigger }) {
       )}
 
       <div className="filters">
-        <input
-          type="date"
-          value={filterDate}
-          onChange={(e) => setFilterDate(e.target.value)}
-          aria-label="Filter by date"
-        />
+        <label className="filters__date-label">
+          <span className="filters__date-caption">From date &amp; time</span>
+          <input
+            className="date-time-trigger"
+            type="text"
+            value={filterDateTimeDisplay}
+            readOnly
+            placeholder="Click to open calendar"
+            onClick={openFilterDatePicker}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                openFilterDatePicker();
+              }
+            }}
+            role="button"
+            tabIndex={0}
+            aria-label="Filter from date and time — open calendar"
+          />
+        </label>
         <input
           type="text"
           value={filterCustomer}
@@ -236,8 +280,10 @@ export default function MyAppointments({ refreshTrigger }) {
         <button
           type="button"
           onClick={() => {
-            setFilterDate("");
+            setFilterFromDateTime(null);
+            setFilterModalSelected(null);
             setFilterCustomer("");
+            setFilterPickerOpen(false);
           }}
         >
           Clear filters
@@ -245,8 +291,8 @@ export default function MyAppointments({ refreshTrigger }) {
       </div>
 
       {appointments.length === 0 && (
-        <p className={`empty${allUpcoming.length > 0 && (filterDate || filterCustomer) ? " empty--filter" : ""}`}>
-          {allUpcoming.length > 0 && (filterDate || filterCustomer)
+        <p className={`empty${allUpcoming.length > 0 && hasActiveFilters ? " empty--filter" : ""}`}>
+          {allUpcoming.length > 0 && hasActiveFilters
             ? "No matches — clear filters or change the date."
             : "No upcoming appointments to show 🐶"}
         </p>
@@ -359,6 +405,48 @@ export default function MyAppointments({ refreshTrigger }) {
             <button type="button" onClick={() => setSelectedAppointment(null)}>
               Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {filterPickerOpen && (
+        <div
+          className="modal-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="filter-picker-title"
+          onClick={() => setFilterPickerOpen(false)}
+        >
+          <div
+            className="modal modal--datepicker appointment-modal"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="filter-picker-title">Filter from date and time</h3>
+            <p className="filter-picker-hint">
+              Only appointments at or after the selected moment are shown.
+            </p>
+            <div className="appointment-datepicker-wrap">
+              <DatePicker
+                inline
+                selected={filterModalSelected}
+                onChange={(date) => setFilterModalSelected(date)}
+                showTimeSelect
+                timeIntervals={15}
+                timeCaption="Time"
+                dateFormat="Pp"
+                locale="enUS"
+                filterTime={filterPassedTime}
+                calendarClassName="appointment-calendar-inner"
+              />
+            </div>
+            <div className="modal-buttons">
+              <button type="button" onClick={() => setFilterPickerOpen(false)}>
+                Cancel
+              </button>
+              <button type="button" className="primary-button" onClick={applyFilterDatePicker}>
+                Apply
+              </button>
+            </div>
           </div>
         </div>
       )}

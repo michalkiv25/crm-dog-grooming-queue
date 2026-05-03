@@ -1,16 +1,20 @@
 using System;
+using System.Linq;
 using DogQueueApi.Data;
 using DogQueueApi.Infrastructure;
 using DogQueueApi.Interfaces.Managers;
 using DogQueueApi.Models;
 using DogQueueApi.Services;
 using DogQueueApi.Validators;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace DogQueueApi.Managers
 {
     public class AppointmentsManager : IAppointmentsManager
     {
+        private const string SqlServerProvider = "Microsoft.EntityFrameworkCore.SqlServer";
+
         /// <summary>
         /// Loyalty: first three bookings (indices 0–2 by ascending Id) pay full catalog; index 3+ get 10% off.
         /// If the customer deletes down to three (or fewer), all remaining rows are repriced to full catalog.
@@ -177,6 +181,35 @@ namespace DogQueueApi.Managers
 
         public ServiceResult<LoyaltyBookingPreview> GetLoyaltyBookingPreview(string? username)
         {
+            var key = UsernameNormalizer.Canonical(username);
+
+            if (_context.Database.ProviderName == SqlServerProvider)
+            {
+                try
+                {
+                    var param = new SqlParameter("@Username", key);
+                    var row = _context.Database
+                        .SqlQueryRaw<LoyaltyPreviewProcRow>(
+                            "EXEC dbo.sp_GetUserLoyaltyPreview @Username",
+                            param)
+                        .AsEnumerable()
+                        .FirstOrDefault();
+
+                    if (row != null)
+                    {
+                        return ServiceResult<LoyaltyBookingPreview>.Ok(new LoyaltyBookingPreview
+                        {
+                            AppointmentCount = row.AppointmentCount,
+                            NextBookingDiscountPercent = row.NextBookingDiscountPercent
+                        });
+                    }
+                }
+                catch
+                {
+                    // Procedure or view not installed yet — fall back to LINQ.
+                }
+            }
+
             var count = AppointmentsForUser(username).Count();
             var discountPercent = count >= FullPriceBookingSlotCount ? 10 : 0;
 
@@ -200,6 +233,19 @@ namespace DogQueueApi.Managers
                 .ToList();
 
             return ServiceResult<List<Appointment>>.Ok(list);
+        }
+
+        public ServiceResult<List<AppointmentWithUserView>> GetUpcomingAppointmentsWithUserInfo()
+        {
+            var now = DateTime.Now.AddMinutes(-1);
+            var list = _context.AppointmentWithUserViews
+                .AsNoTracking()
+                .Where(v => v.Date >= now)
+                .OrderBy(v => v.Date)
+                .ThenBy(v => v.Id)
+                .ToList();
+
+            return ServiceResult<List<AppointmentWithUserView>>.Ok(list);
         }
     }
 }

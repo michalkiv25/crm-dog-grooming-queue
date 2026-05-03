@@ -18,6 +18,16 @@
       "environmentVariables": {
         "ASPNETCORE_ENVIRONMENT": "Development"
       }
+    },
+    "sqlserver": {
+      "commandName": "Project",
+      "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5285",
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ConnectionStrings__DefaultConnection": "Server=(localdb)\\mssqllocaldb;Database=DogQueueApi_Dev;Trusted_Connection=True;MultipleActiveResultSets=true;TrustServerCertificate=True"
+      }
     }
   }
 }

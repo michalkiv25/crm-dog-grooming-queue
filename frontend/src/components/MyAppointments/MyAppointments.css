@@ -81,6 +81,62 @@ h2 {
   color: #555;
 }
 
+/* Filters: grid so columns don’t overlap; inputs share height (global input { margin } breaks flex rows). */
+.my-appointments-page .filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.my-appointments-page .filters input {
+  flex: unset;
+  min-width: 0;
+}
+
+.my-appointments-page .filters > input[type="text"] {
+  margin: 0;
+  min-height: 44px;
+  box-sizing: border-box;
+}
+
+.my-appointments-page .filters > button {
+  margin: 0;
+  align-self: end;
+  white-space: nowrap;
+}
+
+.filters .filters__date-label {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 6px;
+  text-align: left;
+  min-width: 0;
+}
+
+.filters .filters__date-label .date-time-trigger {
+  margin: 0;
+  min-height: 44px;
+  box-sizing: border-box;
+  line-height: 1.25;
+}
+
+.filters__date-caption {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #444;
+  line-height: 1.2;
+  min-height: 1.2em;
+}
+
+.filter-picker-hint {
+  margin: 0 0 12px 0;
+  font-size: 0.85rem;
+  color: #555;
+  line-height: 1.4;
+}
+
 .my-appointments-warning {
   padding: 10px 12px;
   margin: 0 0 14px 0;
