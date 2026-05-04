@@ -152,10 +152,7 @@ export default function CreateAppointment({ onSuccess }) {
         First three saved appointments are full list price; from your <strong>fourth</strong> saved appointment
         onward you get <strong>10% off</strong> that size’s list price (fifth, sixth, … as well). If you cancel
         until you have fewer than four in total, all remaining ones return to full price. Order is by
-        <strong> scheduled date and time</strong> (earliest first). Final price is set when you submit — see{" "}
-        <strong>My Appointments</strong>. Only{" "}
-        <strong>one</strong> appointment per exact date and time for the whole salon; if that slot is taken, choose
-        another time. <strong>Busy times are hidden</strong> in the calendar.
+        <strong> scheduled date and time</strong> (earliest first). 
       </p>
 
       {errors.length > 0 && (
