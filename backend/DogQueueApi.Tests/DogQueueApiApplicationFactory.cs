@@ -1,11 +1,11 @@
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.Extensions.Configuration;
 
 namespace DogQueueApi.Tests;
 
 /// <summary>
 /// Test host with deterministic JWT secret and isolated SQLite file so tests do not touch dev DB.
+/// <see cref="UseSetting"/> overrides appsettings.json (e.g. LocalDB) so integration tests run on Mac/Linux.
 /// </summary>
 public class DogQueueApiApplicationFactory : WebApplicationFactory<Program>
 {
@@ -16,15 +16,24 @@ public class DogQueueApiApplicationFactory : WebApplicationFactory<Program>
     {
         builder.UseEnvironment("Development");
 
-        builder.ConfigureAppConfiguration((_, config) =>
+        // Must win over appsettings.json LocalDB — InMemoryCollection alone can lose merge order with minimal hosting.
+        builder.UseSetting("ConnectionStrings:DefaultConnection", $"Data Source={_testDbPath}");
+        builder.UseSetting("Jwt:SecretKey", "TestJwtSecret_KeyMustBeAtLeast32CharsLong!");
+        builder.UseSetting("Jwt:Issuer", "DogQueueApi");
+        builder.UseSetting("Jwt:Audience", "DogQueueApi");
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        base.Dispose(disposing);
+        try
         {
-            config.AddInMemoryCollection(new Dictionary<string, string?>
-            {
-                ["Jwt:SecretKey"] = "TestJwtSecret_KeyMustBeAtLeast32CharsLong!",
-                ["Jwt:Issuer"] = "DogQueueApi",
-                ["Jwt:Audience"] = "DogQueueApi",
-                ["ConnectionStrings:DefaultConnection"] = $"Data Source={_testDbPath}"
-            });
-        });
+            if (File.Exists(_testDbPath))
+                File.Delete(_testDbPath);
+        }
+        catch
+        {
+            // ignore temp cleanup failures
+        }
     }
 }
