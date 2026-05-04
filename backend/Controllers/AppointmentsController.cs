@@ -5,12 +5,13 @@ using DogQueueApi.Models;
 using Microsoft.AspNetCore.Authorization;
 using DogQueueApi.Services;
 
-namespace DogQueueApi.Controllers
+namespace DogQueueApi.Controllers;
+
+/// <summary>HTTP API for appointments — delegates to <see cref="IAppointmentsManager"/> (business rules, validation).</summary>
+[ApiController]
+[Route("api/appointments")]
+public class AppointmentsController : ControllerBase
 {
-    [ApiController]
-    [Route("api/appointments")]
-    public class AppointmentsController : ControllerBase
-    {
         private readonly IAppointmentsManager _appointmentsManager;
         private readonly ICurrentUserProvider _currentUserProvider;
 
@@ -141,5 +142,4 @@ namespace DogQueueApi.Controllers
                 _ => StatusCode(result.StatusCode, payload)
             };
         }
-    }
 }

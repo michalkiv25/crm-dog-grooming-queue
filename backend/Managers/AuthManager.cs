@@ -1,73 +1,72 @@
-using DogQueueApi.Data;
 using DogQueueApi.Infrastructure;
 using DogQueueApi.Interfaces.Managers;
 using DogQueueApi.Interfaces.Providers;
+using DogQueueApi.Interfaces.Repositories;
 using DogQueueApi.Models;
 using DogQueueApi.Models.Auth;
 using DogQueueApi.Services;
 using DogQueueApi.Validators;
 
-namespace DogQueueApi.Managers
+namespace DogQueueApi.Managers;
+
+/// <summary>Auth business rules + orchestration. HTTP stays in <see cref="Controllers.AuthController"/>; DB in <see cref="Data.Repositories.UserRepository"/>.</summary>
+public class AuthManager : IAuthManager
 {
-    public class AuthManager : IAuthManager
+    private readonly IUserRepository _users;
+    private readonly ITokenProvider _tokenProvider;
+
+    public AuthManager(IUserRepository users, ITokenProvider tokenProvider)
     {
-        private readonly AppDbContext _context;
-        private readonly ITokenProvider _tokenProvider;
+        _users = users;
+        _tokenProvider = tokenProvider;
+    }
 
-        public AuthManager(AppDbContext context, ITokenProvider tokenProvider)
+    public ServiceResult<object?> Register(User user)
+    {
+        user.Username = UsernameNormalizer.Canonical(user.Username);
+
+        var (isValid, errors) = UserValidator.ValidateRegister(user);
+        if (!isValid)
         {
-            _context = context;
-            _tokenProvider = tokenProvider;
+            return ServiceResult<object?>.BadRequest("Validation failed", errors);
         }
 
-        public ServiceResult<object?> Register(User user)
+        if (_users.UsernameExists(user.Username))
         {
-            user.Username = UsernameNormalizer.Canonical(user.Username);
-
-            var (isValid, errors) = UserValidator.ValidateRegister(user);
-            if (!isValid)
-            {
-                return ServiceResult<object?>.BadRequest("Validation failed", errors);
-            }
-
-            if (_context.Users.Any(u => u.Username == user.Username))
-            {
-                return ServiceResult<object?>.BadRequest("Username already exists");
-            }
-
-            _context.Users.Add(user);
-            _context.SaveChanges();
-
-            return ServiceResult<object?>.Ok(new { message = "User registered successfully" });
+            return ServiceResult<object?>.BadRequest("Username already exists");
         }
 
-        public ServiceResult<LoginResponse> Login(LoginRequest login)
+        _users.Add(user);
+        _users.SaveChanges();
+
+        return ServiceResult<object?>.Ok(new { message = "User registered successfully" });
+    }
+
+    public ServiceResult<LoginResponse> Login(LoginRequest login)
+    {
+        var (isValid, errors) = UserValidator.ValidateLogin(login);
+        if (!isValid)
         {
-            var (isValid, errors) = UserValidator.ValidateLogin(login);
-            if (!isValid)
-            {
-                return ServiceResult<LoginResponse>.BadRequest("Validation failed", errors);
-            }
-
-            var loginName = UsernameNormalizer.Canonical(login.Username);
-            var user = _context.Users
-                .FirstOrDefault(u => u.Username == loginName && u.Password == login.Password);
-
-            if (user == null)
-            {
-                return ServiceResult<LoginResponse>.Unauthorized("Invalid credentials");
-            }
-
-            var jwt = _tokenProvider.CreateToken(user);
-
-            var response = new LoginResponse
-            {
-                Token = jwt,
-                Username = user.Username,
-                Fullname = user.FullName
-            };
-
-            return ServiceResult<LoginResponse>.Ok(response);
+            return ServiceResult<LoginResponse>.BadRequest("Validation failed", errors);
         }
+
+        var loginName = UsernameNormalizer.Canonical(login.Username);
+        var user = _users.FindByUsernameAndPassword(loginName, login.Password);
+
+        if (user == null)
+        {
+            return ServiceResult<LoginResponse>.Unauthorized("Invalid credentials");
+        }
+
+        var jwt = _tokenProvider.CreateToken(user);
+
+        var response = new LoginResponse
+        {
+            Token = jwt,
+            Username = user.Username,
+            Fullname = user.FullName
+        };
+
+        return ServiceResult<LoginResponse>.Ok(response);
     }
 }

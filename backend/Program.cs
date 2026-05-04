@@ -3,7 +3,9 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using DogQueueApi.Configuration;
 using DogQueueApi.Data;
+using DogQueueApi.Data.Repositories;
 using DogQueueApi.Interfaces.Managers;
+using DogQueueApi.Interfaces.Repositories;
 using DogQueueApi.Interfaces.Providers;
 using DogQueueApi.Managers;
 using DogQueueApi.Providers;
@@ -63,6 +65,8 @@ builder.Services.AddDbContext<AppDbContext>(options =>
         options.UseSqlServer(defaultConnection);
     }
 });
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
 builder.Services.AddScoped<IAuthManager, AuthManager>();
 builder.Services.AddScoped<IAppointmentsManager, AppointmentsManager>();
 builder.Services.AddSingleton<ICurrentUserProvider, CurrentUserProvider>();

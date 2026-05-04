@@ -4,67 +4,67 @@ using DogQueueApi.Models;
 using DogQueueApi.Models.Auth;
 using DogQueueApi.Services;
 
-namespace DogQueueApi.Controllers
+namespace DogQueueApi.Controllers;
+
+/// <summary>HTTP API for auth — no business rules; delegates to <see cref="Interfaces.Managers.IAuthManager"/>.</summary>
+[ApiController]
+[Route("api/auth")]
+public class AuthController : ControllerBase
 {
-    [ApiController]
-    [Route("api/auth")]
-    public class AuthController : ControllerBase
+    private readonly IAuthManager _authManager;
+
+    public AuthController(IAuthManager authManager)
     {
-        private readonly IAuthManager _authManager;
+        _authManager = authManager;
+    }
 
-        public AuthController(IAuthManager authManager)
+    // ---------------- REGISTER ----------------
+    [HttpPost("register")]
+    public IActionResult Register([FromBody] User user)
+    {
+        var result = _authManager.Register(user);
+        return ToActionResult(result);
+    }
+
+    // ---------------- LOGIN (JWT REAL) ----------------
+    [HttpPost("login")]
+    public IActionResult Login([FromBody] LoginRequest login)
+    {
+        var result = _authManager.Login(login);
+        return ToActionResult(result);
+    }
+
+    private IActionResult ToActionResult(ServiceResult<object?> result)
+    {
+        object payload = result.Errors?.Length > 0
+            ? new { message = result.Message, errors = result.Errors }
+            : result.Data ?? new { message = result.Message };
+
+        return result.StatusCode switch
         {
-            _authManager = authManager;
-        }
+            200 => Ok(payload),
+            400 => BadRequest(payload),
+            401 => Unauthorized(payload),
+            403 => StatusCode(403, payload),
+            404 => NotFound(payload),
+            _ => StatusCode(result.StatusCode, payload)
+        };
+    }
 
-        // ---------------- REGISTER ----------------
-        [HttpPost("register")]
-        public IActionResult Register([FromBody] User user)
+    private IActionResult ToActionResult(ServiceResult<LoginResponse> result)
+    {
+        object payload = result.Errors?.Length > 0
+            ? new { message = result.Message, errors = result.Errors }
+            : (object?)result.Data ?? new { message = result.Message };
+
+        return result.StatusCode switch
         {
-            var result = _authManager.Register(user);
-            return ToActionResult(result);
-        }
-
-        // ---------------- LOGIN (JWT REAL) ----------------
-        [HttpPost("login")]
-        public IActionResult Login([FromBody] LoginRequest login)
-        {
-            var result = _authManager.Login(login);
-            return ToActionResult(result);
-        }
-
-        private IActionResult ToActionResult(ServiceResult<object?> result)
-        {
-            object payload = result.Errors?.Length > 0
-                ? new { message = result.Message, errors = result.Errors }
-                : result.Data ?? new { message = result.Message };
-
-            return result.StatusCode switch
-            {
-                200 => Ok(payload),
-                400 => BadRequest(payload),
-                401 => Unauthorized(payload),
-                403 => StatusCode(403, payload),
-                404 => NotFound(payload),
-                _ => StatusCode(result.StatusCode, payload)
-            };
-        }
-
-        private IActionResult ToActionResult(ServiceResult<LoginResponse> result)
-        {
-            object payload = result.Errors?.Length > 0
-                ? new { message = result.Message, errors = result.Errors }
-                : (object?)result.Data ?? new { message = result.Message };
-
-            return result.StatusCode switch
-            {
-                200 => Ok(payload),
-                400 => BadRequest(payload),
-                401 => Unauthorized(payload),
-                403 => StatusCode(403, payload),
-                404 => NotFound(payload),
-                _ => StatusCode(result.StatusCode, payload)
-            };
-        }
+            200 => Ok(payload),
+            400 => BadRequest(payload),
+            401 => Unauthorized(payload),
+            403 => StatusCode(403, payload),
+            404 => NotFound(payload),
+            _ => StatusCode(result.StatusCode, payload)
+        };
     }
 }
