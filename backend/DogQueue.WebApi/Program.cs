@@ -29,23 +29,28 @@ JwtSettings.ResolveJwtSecret(jwtSettings, builder.Environment.ContentRootPath);
 builder.Services.AddSingleton<IOptions<JwtSettings>>(_ => Options.Create(jwtSettings));
 
 var defaultConnection = builder.Configuration.GetConnectionString("DefaultConnection")?.Trim();
-if (string.IsNullOrWhiteSpace(defaultConnection))
+var useSqliteFallback = string.IsNullOrWhiteSpace(defaultConnection);
+
+if (!useSqliteFallback &&
+    OperatingSystem.IsLinux() &&
+    defaultConnection?.Contains("localdb", StringComparison.OrdinalIgnoreCase) == true)
 {
-    throw new InvalidOperationException(
-        "ConnectionStrings:DefaultConnection is required. This API uses Microsoft SQL Server only. " +
-        "Set it in appsettings or the ConnectionStrings__DefaultConnection environment variable.");
+    Console.WriteLine(
+        "ConnectionStrings__DefaultConnection points at LocalDB on Linux. Falling back to SQLite (Data Source=dogqueue.db).");
+    useSqliteFallback = true;
 }
 
-if (OperatingSystem.IsLinux() &&
-    defaultConnection.Contains("localdb", StringComparison.OrdinalIgnoreCase))
+if (useSqliteFallback)
 {
-    throw new InvalidOperationException(
-        "Linux cannot use SQL Server LocalDB. Point ConnectionStrings__DefaultConnection at a real SQL Server instance " +
-        "(e.g. Docker or a cloud host).");
+    Console.WriteLine("No SQL Server connection string configured. Falling back to SQLite (Data Source=dogqueue.db).");
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseSqlite("Data Source=dogqueue.db"));
 }
-
-builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(defaultConnection));
+else
+{
+    builder.Services.AddDbContext<AppDbContext>(options =>
+        options.UseSqlServer(defaultConnection));
+}
 
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAppointmentRepository, AppointmentRepository>();
@@ -86,8 +91,15 @@ var app = builder.Build();
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    db.Database.Migrate();
-    SqlServerRoutineInstaller.Apply(db);
+    if (useSqliteFallback)
+    {
+        db.Database.EnsureCreated();
+    }
+    else
+    {
+        db.Database.Migrate();
+        SqlServerRoutineInstaller.Apply(db);
+    }
 }
 
 app.UseCors("AllowReactApp");
