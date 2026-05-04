@@ -62,9 +62,15 @@ public class AppointmentRepository : IAppointmentRepository
             .ThenBy(a => a.Id)
             .ToList();
 
-    public void ExecuteUpdatePriceAndDuration(int appointmentId, decimal price, int durationMinutes) =>
-        _db.Database.ExecuteSqlInterpolated(
-            $"UPDATE dbo.Appointments SET Price = {price}, DurationMinutes = {durationMinutes} WHERE Id = {appointmentId}");
+    public void ExecuteUpdatePriceAndDuration(int appointmentId, decimal price, int durationMinutes)
+    {
+        /** Provider-agnostic (SQLite has no dbo schema; raw dbo.Appointments breaks loyalty repricing on Render fallback). */
+        _db.Appointments
+            .Where(a => a.Id == appointmentId)
+            .ExecuteUpdate(setters => setters
+                .SetProperty(a => a.Price, price)
+                .SetProperty(a => a.DurationMinutes, durationMinutes));
+    }
 
     public SlotTakenProcRow? ExecSlotTakenProcedure(DateTime slot, int? excludeAppointmentId)
     {
