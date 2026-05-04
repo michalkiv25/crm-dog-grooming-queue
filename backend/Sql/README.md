@@ -6,7 +6,7 @@
 - **`appsettings.Production.json`** overrides to **SQLite** (`dogqueue.db`) for Docker / Render on Linux (no LocalDB there). Override with `ConnectionStrings__DefaultConnection` in the host if you use Azure SQL instead.
 - **Mac / Linux dev:** LocalDB is unavailable — use Docker SQL Server and set `ConnectionStrings__DefaultConnection` (see `appsettings.SqlServer.example.json`), or use `Data Source=...` for SQLite-only dev.
 - Launch profile **`sqlserver`** in `launchSettings.json` still forces LocalDB if you want an explicit profile on Windows.
-- On startup, when the provider is **not** SQLite, the app runs **`Database.Migrate()`** then **`SqlServerRoutineInstaller`** (creates VIEW + `sp_GetUserLoyaltyPreview`).
+- On startup, when the provider is **not** SQLite, the app runs **`Database.Migrate()`** then **`SqlServerRoutineInstaller`** (creates VIEW + stored procedures).
 
 ## VIEW: `vw_AppointmentsWithUsers`
 
@@ -22,3 +22,12 @@ SQLite does not support `CREATE PROCEDURE`. The procedure is created only when `
 - **Call:** `AppointmentsManager.GetLoyaltyBookingPreview` uses `EXEC dbo.sp_GetUserLoyaltyPreview @Username` when the provider is SqlServer; otherwise the same logic runs in LINQ.
 
 Script copy: `sp_GetUserLoyaltyPreview.sql`.
+
+## Stored procedure: `dbo.sp_AppointmentSlotTaken` (SQL Server only)
+
+Returns whether the salon already has an appointment at the same calendar **minute** (year/month/day/hour/minute). Used to block double-booking.
+
+- **Install:** `SqlServerRoutineInstaller.Apply`.
+- **Call:** `AppointmentsManager` create/update → `EXEC dbo.sp_AppointmentSlotTaken` on SqlServer; on SQLite the same check runs in LINQ.
+
+Script copy: `sp_AppointmentSlotTaken.sql`.

@@ -46,6 +46,13 @@ namespace DogQueueApi.Managers
                 return ServiceResult<Appointment>.BadRequest("Validation failed", errors);
             }
 
+            if (IsAppointmentSlotTaken(appointment.Date))
+            {
+                return ServiceResult<Appointment>.BadRequest(
+                    "That date and time is already booked",
+                    new[] { "This time slot is already taken. Choose another date or time." });
+            }
+
             appointment.CreatedAt = DateTime.Now;
 
             appointment.CalculatePriceAndDuration();
@@ -78,6 +85,13 @@ namespace DogQueueApi.Managers
             if (!isValid)
             {
                 return ServiceResult<Appointment>.BadRequest("Validation failed", errors);
+            }
+
+            if (IsAppointmentSlotTaken(updatedAppointment.Date, id))
+            {
+                return ServiceResult<Appointment>.BadRequest(
+                    "That date and time is already booked",
+                    new[] { "This time slot is already taken. Choose another date or time." });
             }
 
             appointment.DogName = updatedAppointment.DogName;
@@ -246,6 +260,55 @@ namespace DogQueueApi.Managers
                 .ToList();
 
             return ServiceResult<List<AppointmentWithUserView>>.Ok(list);
+        }
+
+        /// <summary>
+        /// True if another appointment already uses this calendar slot (same year/month/day/hour/minute).
+        /// SQL Server: stored procedure <c>dbo.sp_AppointmentSlotTaken</c>; SQLite: LINQ (no CREATE PROCEDURE).
+        /// </summary>
+        private bool IsAppointmentSlotTaken(DateTime slot, int? excludeAppointmentId = null)
+        {
+            if (_context.Database.ProviderName == SqlServerProvider)
+            {
+                try
+                {
+                    var row = _context.Database
+                        .SqlQueryRaw<SlotTakenProcRow>(
+                            "EXEC dbo.sp_AppointmentSlotTaken @Year, @Month, @Day, @Hour, @Minute, @ExcludeAppointmentId",
+                            new SqlParameter("@Year", slot.Year),
+                            new SqlParameter("@Month", slot.Month),
+                            new SqlParameter("@Day", slot.Day),
+                            new SqlParameter("@Hour", slot.Hour),
+                            new SqlParameter("@Minute", slot.Minute),
+                            new SqlParameter("@ExcludeAppointmentId", (object?)excludeAppointmentId ?? DBNull.Value))
+                        .AsEnumerable()
+                        .FirstOrDefault();
+
+                    if (row != null)
+                        return row.Taken != 0;
+                }
+                catch
+                {
+                    // Procedure missing — fall back to LINQ
+                }
+            }
+
+            return AppointmentSlotTakenByLinq(slot, excludeAppointmentId);
+        }
+
+        private bool AppointmentSlotTakenByLinq(DateTime slot, int? excludeAppointmentId)
+        {
+            var query = _context.Appointments.AsNoTracking().Where(a =>
+                a.Date.Year == slot.Year &&
+                a.Date.Month == slot.Month &&
+                a.Date.Day == slot.Day &&
+                a.Date.Hour == slot.Hour &&
+                a.Date.Minute == slot.Minute);
+
+            if (excludeAppointmentId.HasValue)
+                query = query.Where(a => a.Id != excludeAppointmentId.Value);
+
+            return query.Any();
         }
     }
 }

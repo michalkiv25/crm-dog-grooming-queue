@@ -61,6 +61,38 @@ public static class SqlServerRoutineInstaller
                         CASE WHEN @cnt >= 3 THEN 10 ELSE 0 END AS NextBookingDiscountPercent;
                 END
                 """);
+
+            db.Database.ExecuteSqlRaw("""
+                IF OBJECT_ID(N'dbo.sp_AppointmentSlotTaken', N'P') IS NOT NULL
+                    DROP PROCEDURE dbo.sp_AppointmentSlotTaken;
+                """);
+
+            db.Database.ExecuteSqlRaw("""
+                CREATE PROCEDURE dbo.sp_AppointmentSlotTaken
+                    @Year INT,
+                    @Month INT,
+                    @Day INT,
+                    @Hour INT,
+                    @Minute INT,
+                    @ExcludeAppointmentId INT NULL
+                AS
+                BEGIN
+                    SET NOCOUNT ON;
+                    DECLARE @Taken INT = 0;
+                    IF EXISTS (
+                        SELECT 1
+                        FROM dbo.Appointments
+                        WHERE YEAR([Date]) = @Year
+                          AND MONTH([Date]) = @Month
+                          AND DAY([Date]) = @Day
+                          AND DATEPART(HOUR, [Date]) = @Hour
+                          AND DATEPART(MINUTE, [Date]) = @Minute
+                          AND (@ExcludeAppointmentId IS NULL OR [Id] <> @ExcludeAppointmentId)
+                    )
+                        SET @Taken = 1;
+                    SELECT @Taken AS Taken;
+                END
+                """);
         }
         catch (Exception ex)
         {
