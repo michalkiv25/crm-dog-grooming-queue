@@ -1,0 +1,40 @@
+namespace DogQueue.WebApi.Models;
+
+public class Appointment
+{
+    public int Id { get; set; }
+    public string Username { get; set; } = "";
+
+    public string DogName { get; set; } = "";
+    public string DogSize { get; set; } = "";
+
+    public DateTime Date { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.Now;
+
+    public decimal Price { get; set; }
+    public int DurationMinutes { get; set; }
+
+    public void CalculatePriceAndDuration()
+    {
+        var size = (DogSize ?? "").Trim().ToLowerInvariant();
+        switch (size)
+        {
+            case "small":
+                DurationMinutes = 30;
+                Price = 100;
+                break;
+            case "medium":
+                DurationMinutes = 45;
+                Price = 150;
+                break;
+            case "large":
+                DurationMinutes = 60;
+                Price = 200;
+                break;
+            default:
+                DurationMinutes = 30;
+                Price = 100;
+                break;
+        }
+    }
+}

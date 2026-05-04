@@ -6,7 +6,7 @@
 **/node_modules/
 **/dist/
 
-# SQLite (local / ephemeral)
+# Local database files (if you attach/copy a .mdf or use local files)
 *.db
 *.db-shm
 *.db-wal
@@ -17,7 +17,6 @@
 **/.DS_Store
 Thumbs.db
 
-# Local debug captures (do not commit)
-appt_resp.txt
-login_resp.json
+# Local debug captures (optional scratch files — not part of the app)
 *_resp.txt
+*_resp.json

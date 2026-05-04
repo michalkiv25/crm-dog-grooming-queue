@@ -4,7 +4,7 @@ const API_ORIGIN =
   import.meta.env.VITE_API_URL?.trim().replace(/\/$/, "") ||
   "http://localhost:5285";
 const API_BASE_URL = `${API_ORIGIN}/api`;
-const REQUEST_TIMEOUT_MS = 8000;
+const REQUEST_TIMEOUT_MS = 20000;
 
 // Helper function to get auth token
 const getAuthToken = () => localStorage.getItem("token");
@@ -28,7 +28,14 @@ const apiCall = async (endpoint, options = {}) => {
       signal: controller.signal,
     });
 
-    const data = await response.json().catch(() => null);
+    /** DELETE often returns 204 / empty body — avoid assuming JSON. */
+    let data = null;
+    try {
+      const text = await response.text();
+      if (text?.trim()) data = JSON.parse(text);
+    } catch {
+      data = null;
+    }
 
     return {
       response,
@@ -88,14 +95,28 @@ export const appointmentsService = {
     return apiCall("/appointments");
   },
 
-  /** Same loyalty rules as POST /appointments — for showing price before submit */
-  async loyaltyPreview() {
-    return apiCall("/appointments/loyalty-preview");
-  },
-
   /** All customers’ future appointments (salon queue) */
   async upcomingQueue() {
     return apiCall("/appointments/upcoming-queue");
+  },
+
+  /** Every customer’s appointments — past and future (full salon board). */
+  async allAppointmentsSalon() {
+    return apiCall("/appointments/all-appointments");
+  },
+
+  /** Salon-wide free/busy for one calendar minute — pass <code>date.toISOString()</code> so server matches POST body. */
+  async checkSlot(isoDateTime, excludeId) {
+    const params = new URLSearchParams({ at: isoDateTime });
+    if (excludeId != null && excludeId !== undefined) {
+      params.set("excludeId", String(excludeId));
+    }
+    return apiCall(`/appointments/check-slot?${params.toString()}`);
+  },
+
+  /** ISO start times (minute buckets) for every booking — drive disabled times in the picker. */
+  async bookedSlotTimes() {
+    return apiCall("/appointments/booked-slot-times");
   },
 
   async create(dogName, dogSize, date) {

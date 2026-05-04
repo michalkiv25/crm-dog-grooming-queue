@@ -1,6 +1,25 @@
 import { useState, useEffect } from "react";
 import { appointmentsService } from "../../services/api";
 import { sanitizeDogNameInput } from "../../utils/inputSanitize";
+import { appointmentNumericId } from "../../utils/loyaltyPrice";
+
+/** `datetime-local` value for the same instant as an API ISO string (local wall time). */
+function isoToDatetimeLocalValue(isoOrLocal) {
+  if (isoOrLocal == null || isoOrLocal === "") return "";
+  const d = new Date(isoOrLocal);
+  if (Number.isNaN(d.getTime())) return "";
+  const pad = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+/** Same slot as stored row if wall times differ by less than ~6 minutes (datetime-local vs ISO skew). */
+function sameBookingSlot(isoOrLocalA, isoOrLocalB) {
+  if (isoOrLocalA == null || isoOrLocalB == null) return false;
+  const ta = new Date(isoOrLocalA).getTime();
+  const tb = new Date(isoOrLocalB).getTime();
+  if (!Number.isFinite(ta) || !Number.isFinite(tb)) return false;
+  return Math.abs(ta - tb) < 6 * 60 * 1000;
+}
 
 export default function EditAppointment({ appointment, onSave, onCancel }) {
   const [dogName, setDogName] = useState("");
@@ -12,7 +31,7 @@ export default function EditAppointment({ appointment, onSave, onCancel }) {
   useEffect(() => {
     setDogName(sanitizeDogNameInput(appointment.dogName ?? ""));
     setDogSize(appointment.dogSize);
-    setDate(appointment.date);
+    setDate(isoToDatetimeLocalValue(appointment.date ?? appointment.Date));
   }, [appointment]);
 
   const validateInput = () => {
@@ -36,7 +55,10 @@ export default function EditAppointment({ appointment, onSave, onCancel }) {
 
     if (!date) {
       newErrors.push("Appointment date is required");
-    } else if (new Date(date) <= new Date()) {
+    } else if (
+      !sameBookingSlot(date, appointment.date) &&
+      new Date(date) <= new Date()
+    ) {
       newErrors.push("Appointment date must be in the future");
     }
 
@@ -49,15 +71,27 @@ export default function EditAppointment({ appointment, onSave, onCancel }) {
     setLoading(true);
 
     try {
-      const { ok, data } = await appointmentsService.update(appointment.id, dogName, dogSize, date);
+      const dateIso = new Date(date).toISOString();
+      const id = appointmentNumericId(appointment);
+      if (id == null) {
+        setErrors(["Invalid appointment id."]);
+        setLoading(false);
+        return;
+      }
+      const { ok, data } = await appointmentsService.update(
+        id,
+        dogName,
+        dogSize,
+        dateIso
+      );
 
       if (ok) {
+        setLoading(false);
         alert("Appointment updated 💾");
-        onSave?.(appointment.id, dogName, dogSize, date);
+        onSave?.(data);
       } else {
-        const errorMessage = data?.errors?.length 
-          ? data.errors[0] 
-          : data?.message || "Failed to update appointment ❌";
+        const errorMessage =
+          data?.errors?.[0] ?? data?.message ?? "Failed to update appointment ❌";
         setErrors([errorMessage]);
         setLoading(false);
       }

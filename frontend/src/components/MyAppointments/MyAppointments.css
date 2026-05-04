@@ -81,60 +81,42 @@ h2 {
   color: #555;
 }
 
-/* Filters: grid so columns don’t overlap; inputs share height (global input { margin } breaks flex rows). */
-.my-appointments-page .filters {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: end;
+.my-appointments-intro--past-note {
+  font-size: 0.88rem;
+  color: #5c5c5c;
+  margin-top: -6px;
 }
 
-.my-appointments-page .filters input {
-  flex: unset;
-  min-width: 0;
+.my-appointments-intro__sub {
+  display: block;
+  margin-top: 4px;
+  font-size: 0.75rem;
+  color: #737373;
+  font-weight: 500;
 }
 
-.my-appointments-page .filters > input[type="text"] {
+.card-past-today {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #e7e5e4;
+}
+
+.card-past-today__line {
   margin: 0;
-  min-height: 44px;
-  box-sizing: border-box;
-}
-
-.my-appointments-page .filters > button {
-  margin: 0;
-  align-self: end;
-  white-space: nowrap;
-}
-
-.filters .filters__date-label {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  text-align: left;
-  min-width: 0;
-}
-
-.filters .filters__date-label .date-time-trigger {
-  margin: 0;
-  min-height: 44px;
-  box-sizing: border-box;
-  line-height: 1.25;
-}
-
-.filters__date-caption {
   font-size: 0.8rem;
+  color: #9a3412;
   font-weight: 600;
-  color: #444;
-  line-height: 1.2;
-  min-height: 1.2em;
 }
 
-.filter-picker-hint {
-  margin: 0 0 12px 0;
-  font-size: 0.85rem;
-  color: #555;
-  line-height: 1.4;
+.card-past-today__sub {
+  margin: 2px 0 0 0;
+  font-size: 0.7rem;
+  color: #78716c;
+}
+
+.popup-past-today {
+  margin-top: 10px;
+  padding-top: 8px;
 }
 
 .my-appointments-warning {
@@ -145,6 +127,24 @@ h2 {
   border: 1px solid #d2b48c;
   font-size: 0.9rem;
   text-align: center;
+}
+
+.my-appointments-info {
+  padding: 10px 12px;
+  margin: 0 0 14px 0;
+  border-radius: 8px;
+  background: rgba(37, 99, 235, 0.08);
+  border: 1px solid #bfdbfe;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #1e3a5f;
+  text-align: center;
+}
+
+.my-appointments-info__code {
+  font-size: 0.8em;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .card--readonly {
@@ -193,7 +193,43 @@ h2 {
   background: #dc2626 !important;
 }
 
+.card-booking-ordinal {
+  font-size: 0.85rem;
+  color: #4b5563;
+  margin-top: 0.35rem;
+}
+
 .my-appts-loading {
   text-align: center;
   margin: 1rem 0;
+}
+
+.popup-readonly-hint {
+  margin-top: 10px;
+}
+
+.popup-actions-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 16px;
+  align-items: center;
+}
+
+.popup-actions-row .btn-edit-own,
+.popup-actions-row .btn-delete-own {
+  flex: 1;
+  min-width: 120px;
+  margin-top: 0;
+}
+
+.popup-close-btn {
+  flex: 1;
+  min-width: 120px;
+  margin-top: 0 !important;
+  background: #64748b !important;
+}
+
+.popup-close-btn:hover {
+  background: #475569 !important;
 }

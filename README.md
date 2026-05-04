@@ -1,6 +1,6 @@
 # Dog Grooming Queue System 🐶
 
-A full-stack web application for managing dog grooming appointments with user authentication, real-time scheduling, and automatic discount calculation for loyal customers.
+A full-stack web application for managing dog grooming appointments with user authentication, real-time scheduling, and loyalty pricing (10% off from the fourth saved appointment onward per customer).
 
 ## 📋 Project Overview
 
@@ -8,7 +8,6 @@ This system allows customers to:
 - Register and login securely with JWT authentication
 - Book dog grooming appointments by size (small/medium/large)
 - View, edit, and delete their appointments
-- Receive automatic 10% discount after 3 bookings
 - Filter appointments by date and customer name
 - View detailed appointment information in a popup
 
@@ -38,22 +37,22 @@ This system allows customers to:
 ### Appointment Management
 - **Create**: Book appointments with dog name, size, and date/time
 - **Read**: View all user appointments with filtering options
-- **Update**: Edit appointment details (except for same-day appointments)
-- **Delete**: Remove appointments (restrictions apply)
+- **Update**: Edit appointment details
+- **Delete**: Remove own appointments (including same-day)
+- **Scheduling**: One appointment per exact date/time salon-wide (create/update rejected if slot taken)
 
-### Pricing & Discounts
+### Pricing & loyalty
 ```
-Dog Size    Duration    Price
+Dog Size    Duration    List price
 Small       30 min      ₪100
 Medium      45 min      ₪150
 Large       60 min      ₪200
 
-Loyalty Discount: 10% off after 3+ appointments
+Per customer (by Username), the **first three** saved appointments (ascending `Id`) pay **full list price**. From the **fourth** saved appointment onward, the stored price is **10% off** that row’s list price for its dog size (fifth, sixth, … also discounted). If the customer **cancels** until they have **fewer than four** appointments in total, **all remaining rows are repriced to full list price** until they save a fourth again. Repricing runs after create, update, delete, when loading `GET /api/appointments`, and when building the upcoming queue endpoints.
 ```
 
 ### Security Features
 - Users can only see/edit their own appointments
-- Cannot delete same-day appointments
 - Cannot edit other users' appointments
 - Password stored securely (basic validation)
 
@@ -74,7 +73,7 @@ Loyalty Discount: 10% off after 3+ appointments
 
 #### Backend Setup
 ```bash
-cd backend
+cd backend/DogQueue.WebApi
 dotnet restore
 dotnet ef database update
 dotnet run
@@ -112,16 +111,16 @@ Frontend runs on: `http://localhost:5173` (or next available port)
 
 ### Microsoft SQL Server (assignment: procedure + VIEW in DB)
 
-- Run the API with a **SQL Server** connection string (not `Data Source=`). On Windows, use Visual Studio / Rider launch profile **`sqlserver`** (LocalDB), or copy `backend/appsettings.SqlServer.example.json` into `appsettings.Development.json`. On Mac/Linux, use Docker SQL Server — see `backend/Sql/README.md`.
-- Startup runs **`Migrate()`** then creates the VIEW + procedure via `SqlServerRoutineInstaller`.
+- The API uses **Microsoft SQL Server only**. Set `ConnectionStrings:DefaultConnection` to a valid SQL Server connection string. On Windows, you can use the **`sqlserver`** launch profile in `backend/DogQueue.WebApi/Properties/launchSettings.json` (LocalDB). On Mac/Linux, use Docker or a cloud SQL Server and set `ConnectionStrings__DefaultConnection`.
+- **Production / Docker:** `appsettings.Production.json` leaves `DefaultConnection` empty — you **must** set `ConnectionStrings__DefaultConnection` at deploy time.
+- Startup runs **`Migrate()`** then creates the VIEW + procedures via `SqlServerRoutineInstaller`.
 
-### Stored procedures (SQL Server)
-- **`dbo.sp_GetUserLoyaltyPreview @Username`** — returns `AppointmentCount` and `NextBookingDiscountPercent` (0 or 10). Created at startup by `SqlServerRoutineInstaller`; called from `GetLoyaltyBookingPreview` when the DB provider is SqlServer.
-- **SQLite:** does not support `CREATE PROCEDURE`; the same preview logic runs in C# (LINQ).
+### Stored procedures
+- **`dbo.sp_AppointmentSlotTaken`** — slot conflict check. Created at startup by `SqlServerRoutineInstaller`.
 
 ### Views
-- **`vw_AppointmentsWithUsers`** — appointments `INNER JOIN` users (`FullName`). Created at startup on SQLite (`SqliteSchemaFixer`) and SqlServer (`SqlServerRoutineInstaller`). Read via **`GET /api/appointments/upcoming-with-user-info`** (`AppointmentWithUserView`).
-- See `backend/Sql/README.md` for file references.
+- **`vw_AppointmentsWithUsers`** — appointments `INNER JOIN` users (`FullName`). Created at startup by `SqlServerRoutineInstaller`. Read via **`GET /api/appointments/upcoming-with-user-info`** (`AppointmentWithUserView`).
+- Reference `.sql` under `backend/Sql/` (optional; slot procedure is also applied from code at startup).
 
 ## 🎨 UI/UX
 
@@ -170,9 +169,8 @@ Appointments
 - [ ] Cannot edit other user's appointment
 - [ ] Filter by date
 - [ ] Filter by customer name
-- [ ] Delete appointment (not same-day)
-- [ ] Cannot delete same-day appointment
-- [ ] Verify 10% discount after 3 appointments
+- [ ] Delete appointment
+- [ ] Verify loyalty: first 3 at list price, 4th+ 10% off; after deletes below 4, all full price again
 - [ ] Logout and redirect to home
 - [ ] Access protected pages without token returns to home
 
@@ -218,7 +216,7 @@ dog-queue-project/
 3. **Create Appointment**: Form submits to backend, discount calculated
 4. **List Appointments**: Fetches filtered appointments from backend
 5. **View Details**: Click card to view full appointment info
-6. **Edit Appointment**: Update details (not same-day)
+6. **Edit Appointment**: Update details
 7. **Delete Appointment**: Remove from schedule
 8. **Logout**: Clear token and data, return to home
 

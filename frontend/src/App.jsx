@@ -90,13 +90,12 @@ function App() {
                   <h1>Dog Grooming Queue</h1>
                   <p>
                     Welcome to the dog grooming queue system. Register quickly
-                    and login to manage your appointments, view your queue, and
-                    get discounts for loyal customers.
+                    and login to manage your appointments, view the shared queue, and earn loyalty pricing.
                   </p>
                   <div className="hero-features">
                     <span>Secure login</span>
                     <span>Easy booking</span>
-                    <span>Discounts after 3 appointments</span>
+                    <span>10% off from your 4th booking (first 3 at list price)</span>
                   </div>
                 </section>
                 <section className="auth-grid">

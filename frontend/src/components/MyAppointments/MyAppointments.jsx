@@ -1,7 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import DatePicker, { registerLocale } from "react-datepicker";
-import { enUS } from "date-fns/locale/en-US";
-import "react-datepicker/dist/react-datepicker.css";
 import { appointmentsService } from "../../services/api";
 import EditAppointment from "../EditAppointment/EditAppointment";
 import {
@@ -11,31 +8,84 @@ import {
   formatShekelUi,
   loyaltyUiApplies,
 } from "../../utils/loyaltyPrice";
+import { usernameFromAccessToken } from "../../utils/jwtClaims";
 import "./MyAppointments.css";
-
-registerLocale("enUS", enUS);
 
 function canonicalUser(u) {
   return String(u ?? "").trim().toLowerCase();
 }
 
+/** Match server loyalty repricing: earliest scheduled appointment first, then by id. */
+function compareAppointmentsChronological(a, b) {
+  const ta = new Date(a.date ?? a.Date).getTime();
+  const tb = new Date(b.date ?? b.Date).getTime();
+  if (Number.isFinite(ta) && Number.isFinite(tb) && ta !== tb) return ta - tb;
+  return (appointmentNumericId(a) ?? 0) - (appointmentNumericId(b) ?? 0);
+}
+
+function sortMineForLoyalty(rows) {
+  return [...rows].sort(compareAppointmentsChronological);
+}
+
+/** Same local calendar day as now, and the appointment start time has already passed. */
+function isPastTodaySlot(isoOrDate) {
+  const t = new Date(isoOrDate).getTime();
+  if (!Number.isFinite(t) || t >= Date.now()) return false;
+  const d = new Date(isoOrDate);
+  const n = new Date();
+  return (
+    d.getFullYear() === n.getFullYear() &&
+    d.getMonth() === n.getMonth() &&
+    d.getDate() === n.getDate()
+  );
+}
+
+/**
+ * Full salon: GET /appointments/all-appointments. If the running API is an older build (404/405 on that route),
+ * fall back to /appointments/upcoming-queue so customers still see everyone’s upcoming slots.
+ */
+async function fetchSalonBoard() {
+  const full = await appointmentsService.allAppointmentsSalon();
+  if (full.ok && Array.isArray(full.data)) {
+    return { data: full.data, upcomingOnly: false, error: null };
+  }
+  if (full.status === 404 || full.status === 405) {
+    const up = await appointmentsService.upcomingQueue();
+    if (up.ok && Array.isArray(up.data)) {
+      return { data: up.data, upcomingOnly: true, error: null };
+    }
+  }
+  const hint =
+    full.status === 404 || full.status === 405
+      ? "If you just added the full-salon route, rebuild and restart the API process so it picks up the new endpoint."
+      : "";
+  return {
+    data: [],
+    upcomingOnly: false,
+    error:
+      [full.data?.message, hint].filter(Boolean).join(" ") ||
+      "Could not load the salon appointment list.",
+  };
+}
+
 export default function MyAppointments({ refreshTrigger }) {
-  const [allUpcoming, setAllUpcoming] = useState([]);
+  /** Full salon board — every customer’s appointments. */
+  const [salonAppointments, setSalonAppointments] = useState([]);
+  const [myAppointmentsChronological, setMyAppointmentsChronological] = useState([]);
   const [editing, setEditing] = useState(null);
   const [loading, setLoading] = useState(true);
   const [selectedAppointment, setSelectedAppointment] = useState(null);
-  /** Show appointments starting at or after this local date-time (from calendar picker). */
-  const [filterFromDateTime, setFilterFromDateTime] = useState(null);
-  const [filterPickerOpen, setFilterPickerOpen] = useState(false);
-  const [filterModalSelected, setFilterModalSelected] = useState(null);
-  const [filterCustomer, setFilterCustomer] = useState("");
   const [loadError, setLoadError] = useState(null);
-  /** Total appointments for the logged-in user (getAll); used when slot index is unknown (stale-DB guard). */
+  const [mineWarning, setMineWarning] = useState(null);
+  /** True when the API has no `all-appointments` route and we showed upcoming-queue instead. */
+  const [salonUpcomingOnly, setSalonUpcomingOnly] = useState(false);
   const [myAppointmentCount, setMyAppointmentCount] = useState(undefined);
-  /** Same user’s rows from getAll(), sorted by id ascending — matches server loyalty slot order. */
-  const [myAppointmentsSortedById, setMyAppointmentsSortedById] = useState([]);
 
-  const me = canonicalUser(localStorage.getItem("username"));
+  /** Prefer JWT (matches API); fall back to login response in localStorage. */
+  const me = canonicalUser(
+    usernameFromAccessToken(localStorage.getItem("token")) ??
+      localStorage.getItem("username")
+  );
 
   useEffect(() => {
     loadAppointments();
@@ -50,103 +100,104 @@ export default function MyAppointments({ refreshTrigger }) {
 
     setLoading(true);
     setLoadError(null);
+    setMineWarning(null);
+    setSalonUpcomingOnly(false);
     try {
-      const [result, mineRes] = await Promise.all([
-        appointmentsService.upcomingQueue(),
+      const [mineRes, salonBoard] = await Promise.all([
         appointmentsService.getAll(),
+        fetchSalonBoard(),
       ]);
 
       if (mineRes.ok && Array.isArray(mineRes.data)) {
         setMyAppointmentCount(mineRes.data.length);
-        setMyAppointmentsSortedById(
-          [...mineRes.data].sort(
-            (a, b) => (appointmentNumericId(a) ?? 0) - (appointmentNumericId(b) ?? 0)
-          )
-        );
+        setMyAppointmentsChronological(sortMineForLoyalty(mineRes.data));
       } else {
         setMyAppointmentCount(undefined);
-        setMyAppointmentsSortedById([]);
-      }
-
-      if (result.ok && Array.isArray(result.data)) {
-        setAllUpcoming(result.data);
-        return;
-      }
-
-      const hint =
-        result.status === 401 || result.status === 403
-          ? "Check your login (token)."
-          : result.status === 404 || result.status === 405
-            ? "This API does not expose the shared queue route — restart the API from the latest code."
+        setMyAppointmentsChronological([]);
+        const hint =
+          mineRes.status === 401 || mineRes.status === 403
+            ? "Check your login (token)."
             : "";
-      setLoadError(
-        [result.data?.message, hint].filter(Boolean).join(" ") ||
-          "Could not load the salon upcoming queue (upcoming-queue)."
-      );
-      setAllUpcoming([]);
+        setMineWarning(
+          [mineRes.data?.message, hint].filter(Boolean).join(" ") ||
+            "Could not load your appointments — loyalty display for your rows may be wrong until you reload."
+        );
+      }
+
+      setSalonAppointments(salonBoard.data);
+      setSalonUpcomingOnly(salonBoard.upcomingOnly);
+      setLoadError(salonBoard.error);
     } catch (err) {
       console.error("ERROR:", err);
       setLoadError("Network error while loading appointments.");
-      setAllUpcoming([]);
+      setMineWarning(null);
       setMyAppointmentCount(undefined);
-      setMyAppointmentsSortedById([]);
+      setMyAppointmentsChronological([]);
+      setSalonAppointments([]);
+      setSalonUpcomingOnly(false);
     } finally {
       setLoading(false);
     }
   };
 
+  /**
+   * Salon board + any of **your** rows from GET /appointments that are missing from the salon payload.
+   * When the server only exposes upcoming-queue (fallback), other customers’ past slots are omitted server-side;
+   * your own past/future still appear because getAll() is merged in by id.
+   */
   const appointments = useMemo(() => {
-    let list = allUpcoming;
-    if (filterFromDateTime) {
-      const from = filterFromDateTime.getTime();
-      list = list.filter((a) => new Date(a.date).getTime() >= from);
+    const byId = new Map();
+    for (const a of salonAppointments) {
+      const id = appointmentNumericId(a);
+      if (id != null) byId.set(id, a);
     }
-    if (filterCustomer.trim()) {
-      const q = filterCustomer.trim().toLowerCase();
-      list = list.filter((a) =>
-        String(a.username ?? "")
-          .toLowerCase()
-          .includes(q)
-      );
+    /** Rows from GET /appointments overwrite salon for the same id — correct username + fields for ownership/delete. */
+    for (const a of myAppointmentsChronological) {
+      const id = appointmentNumericId(a);
+      if (id != null) byId.set(id, a);
     }
-    return list;
-  }, [allUpcoming, filterFromDateTime, filterCustomer]);
-
-  const isMine = (a) => canonicalUser(a.username) === me;
-
-  const filterPassedTime = (time) => time.getTime() > Date.now();
-
-  const filterDateTimeDisplay = filterFromDateTime
-    ? filterFromDateTime.toLocaleString("en-US", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "";
-
-  const openFilterDatePicker = () => {
-    setFilterModalSelected(
-      filterFromDateTime ? new Date(filterFromDateTime.getTime()) : new Date()
+    return [...byId.values()].sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
     );
-    setFilterPickerOpen(true);
+  }, [salonAppointments, myAppointmentsChronological]);
+
+  /** Ids returned by GET /appointments — authoritative “your rows” even if username text differs on the salon payload. */
+  const myAppointmentIds = useMemo(
+    () =>
+      new Set(
+        myAppointmentsChronological
+          .map((x) => appointmentNumericId(x))
+          .filter((n) => n != null)
+      ),
+    [myAppointmentsChronological]
+  );
+
+  const rowUsername = (a) => a?.username ?? a?.Username;
+
+  const isMine = (a) => {
+    if (!me) return false;
+    const id = appointmentNumericId(a);
+    if (id != null && myAppointmentIds.has(id)) return true;
+    return canonicalUser(rowUsername(a)) === me;
   };
 
-  const applyFilterDatePicker = () => {
-    if (!filterModalSelected) return;
-    setFilterFromDateTime(new Date(filterModalSelected.getTime()));
-    setFilterPickerOpen(false);
-  };
+  const appointmentById = (id) =>
+    salonAppointments.find((x) => appointmentNumericId(x) === Number(id)) ??
+    myAppointmentsChronological.find((x) => appointmentNumericId(x) === Number(id));
 
-  const hasActiveFilters = Boolean(filterFromDateTime) || filterCustomer.trim().length > 0;
+  /** Close edit modal if this row became a “past today” slot (e.g. after refresh). */
+  useEffect(() => {
+    if (editing == null) return;
+    const ap = appointmentById(editing);
+    if (ap && isPastTodaySlot(ap.date) && isMine(ap)) setEditing(null);
+  }, [editing, salonAppointments, myAppointmentsChronological]);
 
   const loyaltyCtx = (a) => {
     const mine = isMine(a);
     let mineSlotIndex;
-    if (mine && myAppointmentsSortedById.length > 0) {
-      const id = appointmentNumericId(a);
-      const idx = myAppointmentsSortedById.findIndex((x) => appointmentNumericId(x) === id);
+    if (mine && myAppointmentsChronological.length > 0) {
+      const idxId = appointmentNumericId(a);
+      const idx = myAppointmentsChronological.findIndex((x) => appointmentNumericId(x) === idxId);
       if (idx >= 0) mineSlotIndex = idx;
     }
     return {
@@ -156,68 +207,85 @@ export default function MyAppointments({ refreshTrigger }) {
     };
   };
 
-  const deleteAppointment = async (id) => {
-    const { ok } = await appointmentsService.delete(id);
-    if (ok) {
-      setSelectedAppointment((s) =>
-        appointmentNumericId(s) === Number(id) ? null : s
-      );
-      const [queue, mineRes] = await Promise.all([
-        appointmentsService.upcomingQueue(),
-        appointmentsService.getAll(),
-      ]);
-      if (mineRes.ok && Array.isArray(mineRes.data)) {
-        setMyAppointmentCount(mineRes.data.length);
-        setMyAppointmentsSortedById(
-          [...mineRes.data].sort(
-            (a, b) => (appointmentNumericId(a) ?? 0) - (appointmentNumericId(b) ?? 0)
-          )
-        );
-      } else {
-        setMyAppointmentCount(undefined);
-        setMyAppointmentsSortedById([]);
-      }
-      if (queue.ok && Array.isArray(queue.data)) {
-        setAllUpcoming(queue.data);
-      } else {
-        const nid = Number(id);
-        setAllUpcoming((prev) =>
-          prev.filter((a) => appointmentNumericId(a) !== nid)
-        );
-      }
-      alert("Appointment deleted ✓");
+  const refreshAfterMutation = async (deletedId) => {
+    const [mineRes, salonBoard] = await Promise.all([
+      appointmentsService.getAll(),
+      fetchSalonBoard(),
+    ]);
+    if (mineRes.ok && Array.isArray(mineRes.data)) {
+      setMyAppointmentCount(mineRes.data.length);
+      setMyAppointmentsChronological(sortMineForLoyalty(mineRes.data));
     } else {
-      alert("Failed to delete ❌");
+      setMyAppointmentCount(undefined);
+      setMyAppointmentsChronological([]);
+    }
+    if (!salonBoard.error && Array.isArray(salonBoard.data)) {
+      setSalonAppointments(salonBoard.data);
+      setSalonUpcomingOnly(salonBoard.upcomingOnly);
+    } else {
+      const nid = Number(deletedId);
+      if (Number.isFinite(nid)) {
+        setSalonAppointments((prev) => prev.filter((a) => appointmentNumericId(a) !== nid));
+      }
     }
   };
 
-  const saveEdit = async (id, dogName, dogSize, date) => {
-    const { ok, data } = await appointmentsService.update(id, dogName, dogSize, date);
+  /** Remove your own booking (blocked in UI for “today” slot whose time has passed). */
+  const deleteAppointment = async (id) => {
+    const nid = Number(id);
+    if (!Number.isFinite(nid)) {
+      alert("Invalid appointment id.");
+      return;
+    }
+    const appt = appointmentById(nid);
+    if (appt && isPastTodaySlot(appt.date) && isMine(appt)) {
+      alert("אי אפשר לערוך או למחוק תור שעברה שעתו באותו יום.");
+      return;
+    }
+    const { ok, data, status } = await appointmentsService.delete(nid);
     if (ok) {
-      setEditing(null);
-      setSelectedAppointment((s) => (s?.id === id ? data : s));
-      const [queue, mineRes] = await Promise.all([
-        appointmentsService.upcomingQueue(),
-        appointmentsService.getAll(),
-      ]);
-      if (mineRes.ok && Array.isArray(mineRes.data)) {
-        setMyAppointmentCount(mineRes.data.length);
-        setMyAppointmentsSortedById(
-          [...mineRes.data].sort(
-            (a, b) => (appointmentNumericId(a) ?? 0) - (appointmentNumericId(b) ?? 0)
-          )
-        );
-      } else {
-        setMyAppointmentCount(undefined);
-        setMyAppointmentsSortedById([]);
-      }
-      if (queue.ok && Array.isArray(queue.data)) {
-        setAllUpcoming(queue.data);
-      } else {
-        setAllUpcoming((prev) => prev.map((a) => (a.id === id ? data : a)));
-      }
+      setSelectedAppointment((s) =>
+        appointmentNumericId(s) === nid ? null : s
+      );
+      await refreshAfterMutation(nid);
+      alert("Appointment deleted ✓");
     } else {
-      console.error("Failed to update:", data);
+      const reason = data?.errors?.[0] ?? data?.message;
+      const http = status ? ` (HTTP ${status})` : "";
+      alert(
+        typeof reason === "string" && reason.trim()
+          ? `Could not delete: ${reason}${http}`
+          : `Failed to delete${http} ❌`
+      );
+    }
+  };
+
+  /** Called after EditAppointment successfully PUTs — refreshes lists (no second PUT). */
+  const saveEdit = async (updated) => {
+    if (!updated) return;
+    const id = appointmentNumericId(updated);
+    setEditing(null);
+    setSelectedAppointment((s) =>
+      appointmentNumericId(s) === id ? updated : s
+    );
+    const [mineRes, salonBoard] = await Promise.all([
+      appointmentsService.getAll(),
+      fetchSalonBoard(),
+    ]);
+    if (mineRes.ok && Array.isArray(mineRes.data)) {
+      setMyAppointmentCount(mineRes.data.length);
+      setMyAppointmentsChronological(sortMineForLoyalty(mineRes.data));
+    } else {
+      setMyAppointmentCount(undefined);
+      setMyAppointmentsChronological([]);
+    }
+    if (!salonBoard.error && Array.isArray(salonBoard.data)) {
+      setSalonAppointments(salonBoard.data);
+      setSalonUpcomingOnly(salonBoard.upcomingOnly);
+    } else {
+      setSalonAppointments((prev) =>
+        prev.map((a) => (appointmentNumericId(a) === id ? updated : a))
+      );
     }
   };
 
@@ -227,22 +295,20 @@ export default function MyAppointments({ refreshTrigger }) {
 
   return (
     <div className="my-appointments-page">
-      <h2>🐶 My Appointments</h2>
-      <p className="my-appointments-intro">
-        This page lists <strong>all customers’</strong> upcoming appointments. You can edit or delete{" "}
-        <strong>only</strong> appointments that belong to your account.
-      </p>
-      <p className="my-appointments-intro my-appointments-intro--loyalty">
-        <strong>Loyalty pricing:</strong> your first three bookings are always full price. From your fourth
-        booking onward, those appointments are 10% off. If you delete appointments and only three (or fewer)
-        remain, every remaining booking returns to full price until you book a fourth again.
-      </p>
-
+      <h2>🐶 The appointments of Michaela's dog grooming salon</h2>
+   
       {!me && (
         <p className="my-appointments-warning">
           Username not saved in this browser — log in again to see edit/delete on your appointments.
         </p>
       )}
+
+      {mineWarning && (
+        <p className="my-appointments-warning" role="status">
+          {mineWarning}
+        </p>
+      )}
+
 
       {loadError && (
         <p className="my-appointments-warning" role="alert">
@@ -250,57 +316,15 @@ export default function MyAppointments({ refreshTrigger }) {
         </p>
       )}
 
-      <div className="filters">
-        <label className="filters__date-label">
-          <span className="filters__date-caption">From date &amp; time</span>
-          <input
-            className="date-time-trigger"
-            type="text"
-            value={filterDateTimeDisplay}
-            readOnly
-            placeholder="Click to open calendar"
-            onClick={openFilterDatePicker}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                openFilterDatePicker();
-              }
-            }}
-            role="button"
-            tabIndex={0}
-            aria-label="Filter from date and time — open calendar"
-          />
-        </label>
-        <input
-          type="text"
-          value={filterCustomer}
-          onChange={(e) => setFilterCustomer(e.target.value)}
-          placeholder="Filter by customer name"
-        />
-        <button
-          type="button"
-          onClick={() => {
-            setFilterFromDateTime(null);
-            setFilterModalSelected(null);
-            setFilterCustomer("");
-            setFilterPickerOpen(false);
-          }}
-        >
-          Clear filters
-        </button>
-      </div>
-
-      {appointments.length === 0 && (
-        <p className={`empty${allUpcoming.length > 0 && hasActiveFilters ? " empty--filter" : ""}`}>
-          {allUpcoming.length > 0 && hasActiveFilters
-            ? "No matches — clear filters or change the date."
-            : "No upcoming appointments to show 🐶"}
-        </p>
+      {appointments.length === 0 && !loadError && (
+        <p className="empty">No appointments in the system yet 🐶</p>
       )}
 
       <div className="cards-container">
         {appointments.map((a) => {
+          const ctx = loyaltyCtx(a);
           const mine = isMine(a);
+          const pastToday = mine && isPastTodaySlot(a.date);
           return (
             <div
               key={a.id}
@@ -308,31 +332,34 @@ export default function MyAppointments({ refreshTrigger }) {
               onClick={() => setSelectedAppointment(a)}
               role="presentation"
             >
-              <h3>👤 {a.username}</h3>
+              <h3>👤 {rowUsername(a)}</h3>
               <p>🐾 Dog: {a.dogName}</p>
               <p>📏 Size: {a.dogSize}</p>
               <p>📅 Date: {new Date(a.date).toLocaleString()}</p>
-              <p>💰 Price: ₪{formatShekelUi(cardPrincipalPrice(a, loyaltyCtx(a)))}</p>
-              {loyaltyUiApplies(a, loyaltyCtx(a)) && (
+              <p>💰 Price: ₪{formatShekelUi(cardPrincipalPrice(a, ctx))}</p>
+              {loyaltyUiApplies(a, ctx) && (
                 <p className="card-loyalty-note">
-                  List price ₪{formatShekelUi(displayCatalogListPrice(a))} — 10%
-                  loyalty discount applied
+                  List price ₪{formatShekelUi(displayCatalogListPrice(a))} — 10% loyalty discount applied
                 </p>
               )}
 
               {!mine && (
-                <p className="card-readonly-hint">
-                  Another customer’s appointment — view only
-                </p>
+                <p className="card-readonly-hint">Another customer’s appointment — view only</p>
               )}
-              {mine && (
+              {pastToday && (
+                <div className="card-past-today">
+                  <p className="card-past-today__line">התור עבר</p>
+                  <p className="card-past-today__sub">אי אפשר לערוך או למחוק</p>
+                </div>
+              )}
+              {mine && me && !pastToday && (
                 <div className="card-actions-own">
                   <button
                     type="button"
                     className="btn-edit-own"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setEditing(a.id);
+                      setEditing(appointmentNumericId(a) ?? a.id);
                     }}
                   >
                     Edit ✏️
@@ -342,7 +369,8 @@ export default function MyAppointments({ refreshTrigger }) {
                     className="btn-delete-own"
                     onClick={(e) => {
                       e.stopPropagation();
-                      deleteAppointment(a.id);
+                      const id = appointmentNumericId(a) ?? a.id;
+                      if (id != null) deleteAppointment(id);
                     }}
                   >
                     Delete ❌
@@ -354,22 +382,26 @@ export default function MyAppointments({ refreshTrigger }) {
         })}
       </div>
 
-      {editing && (
-        <EditAppointment
-          appointment={allUpcoming.find(
-            (a) => appointmentNumericId(a) === Number(editing)
-          )}
-          onSave={saveEdit}
-          onCancel={() => setEditing(null)}
-        />
-      )}
+      {editing &&
+        (() => {
+          const ap = appointmentById(editing);
+          if (!ap) return null;
+          if (isPastTodaySlot(ap.date) && isMine(ap)) return null;
+          return (
+            <EditAppointment
+              appointment={ap}
+              onSave={saveEdit}
+              onCancel={() => setEditing(null)}
+            />
+          );
+        })()}
 
       {selectedAppointment && (
         <div className="popup-overlay" onClick={() => setSelectedAppointment(null)}>
           <div className="popup" onClick={(e) => e.stopPropagation()}>
             <h3>Appointment details</h3>
             <p>
-              <strong>Customer:</strong> {selectedAppointment.username}
+              <strong>Customer:</strong> {rowUsername(selectedAppointment)}
             </p>
             <p>
               <strong>Dog:</strong> {selectedAppointment.dogName}
@@ -398,53 +430,50 @@ export default function MyAppointments({ refreshTrigger }) {
             {loyaltyUiApplies(selectedAppointment, loyaltyCtx(selectedAppointment)) && (
               <p className="card-loyalty-note">
                 List price ₪
-                {formatShekelUi(displayCatalogListPrice(selectedAppointment))} — 10%
-                loyalty discount applied
+                {formatShekelUi(displayCatalogListPrice(selectedAppointment))} — 10% loyalty discount applied
               </p>
             )}
-            <button type="button" onClick={() => setSelectedAppointment(null)}>
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-
-      {filterPickerOpen && (
-        <div
-          className="modal-overlay"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="filter-picker-title"
-          onClick={() => setFilterPickerOpen(false)}
-        >
-          <div
-            className="modal modal--datepicker appointment-modal"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 id="filter-picker-title">Filter from date and time</h3>
-            <p className="filter-picker-hint">
-              Only appointments at or after the selected moment are shown.
-            </p>
-            <div className="appointment-datepicker-wrap">
-              <DatePicker
-                inline
-                selected={filterModalSelected}
-                onChange={(date) => setFilterModalSelected(date)}
-                showTimeSelect
-                timeIntervals={15}
-                timeCaption="Time"
-                dateFormat="Pp"
-                locale="enUS"
-                filterTime={filterPassedTime}
-                calendarClassName="appointment-calendar-inner"
-              />
-            </div>
-            <div className="modal-buttons">
-              <button type="button" onClick={() => setFilterPickerOpen(false)}>
-                Cancel
-              </button>
-              <button type="button" className="primary-button" onClick={applyFilterDatePicker}>
-                Apply
+            {!isMine(selectedAppointment) && (
+              <p className="card-readonly-hint popup-readonly-hint">
+                Another customer’s appointment — view only (log in as that customer to edit or delete).
+              </p>
+            )}
+            {isMine(selectedAppointment) && isPastTodaySlot(selectedAppointment.date) && (
+              <div className="card-past-today popup-past-today">
+                <p className="card-past-today__line">התור עבר</p>
+                <p className="card-past-today__sub">אי אפשר לערוך או למחוק</p>
+              </div>
+            )}
+            <div className="popup-actions-row">
+              {me &&
+                isMine(selectedAppointment) &&
+                !isPastTodaySlot(selectedAppointment.date) && (
+                <>
+                  <button
+                    type="button"
+                    className="btn-edit-own"
+                    onClick={() => {
+                      const sid = appointmentNumericId(selectedAppointment);
+                      setSelectedAppointment(null);
+                      if (sid != null) setEditing(sid);
+                    }}
+                  >
+                    Edit ✏️
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-delete-own"
+                    onClick={() => {
+                      const sid = appointmentNumericId(selectedAppointment);
+                      if (sid != null) deleteAppointment(sid);
+                    }}
+                  >
+                    Delete ❌
+                  </button>
+                </>
+              )}
+              <button type="button" className="popup-close-btn" onClick={() => setSelectedAppointment(null)}>
+                Close
               </button>
             </div>
           </div>

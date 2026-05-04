@@ -1,12 +1,18 @@
-import { useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
-import { format } from "date-fns";
 import { enUS } from "date-fns/locale/en-US";
 import "react-datepicker/dist/react-datepicker.css";
 import { appointmentsService } from "../../services/api";
 import { sanitizeDogNameInput } from "../../utils/inputSanitize";
 
 registerLocale("enUS", enUS);
+
+/** Local calendar minute key — must match <code>filterTime</code>’s <code>Date</code> (browser local). */
+function localMinuteKey(d) {
+  const x = d instanceof Date ? d : new Date(d);
+  if (Number.isNaN(x.getTime())) return "";
+  return `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}-${x.getHours()}-${x.getMinutes()}`;
+}
 
 export default function CreateAppointment({ onSuccess }) {
   const [dogName, setDogName] = useState("");
@@ -16,6 +22,25 @@ export default function CreateAppointment({ onSuccess }) {
   const [modalSelected, setModalSelected] = useState(null);
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(false);
+  /** Set of <see cref="localMinuteKey"/> for occupied salon slots */
+  const [occupiedLocalKeys, setOccupiedLocalKeys] = useState(() => new Set());
+
+  const loadOccupiedSlots = useCallback(async () => {
+    const res = await appointmentsService.bookedSlotTimes();
+    if (!res.ok || !Array.isArray(res.data)) {
+      setOccupiedLocalKeys(new Set());
+      return;
+    }
+    const next = new Set();
+    for (const iso of res.data) {
+      next.add(localMinuteKey(new Date(iso)));
+    }
+    setOccupiedLocalKeys(next);
+  }, []);
+
+  useEffect(() => {
+    if (isPickerOpen) loadOccupiedSlots();
+  }, [isPickerOpen, loadOccupiedSlots]);
 
   const validateInput = () => {
     const newErrors = [];
@@ -64,12 +89,13 @@ export default function CreateAppointment({ onSuccess }) {
         setAppointmentDateTime("");
         setModalSelected(null);
         setErrors([]);
+        await loadOccupiedSlots();
         onSuccess?.();
       } else {
-        const errorMessage = data?.errors?.length
-          ? data.errors[0]
-          : data?.message || "Failed to create appointment ❌";
+        const raw = data?.errors?.[0] ?? data?.message ?? "";
+        const errorMessage = raw || "Failed to create appointment ❌";
         setErrors([errorMessage]);
+        await loadOccupiedSlots();
       }
     } catch (err) {
       setErrors(["Network error. Please try again."]);
@@ -88,10 +114,13 @@ export default function CreateAppointment({ onSuccess }) {
     setIsPickerOpen(true);
   };
 
-  /** Hide times earlier than “now” when the chosen day is today */
-  const filterPassedTime = (time) => time.getTime() > Date.now();
+  /** Hide past times and times already booked in this salon (same local minute). */
+  const filterTime = (time) => {
+    if (time.getTime() <= Date.now()) return false;
+    return true;
+  };
 
-  const applyPickerSelection = () => {
+  const applyPickerSelection = async () => {
     if (!modalSelected) {
       setErrors(["Please choose a date and time"]);
       return;
@@ -100,7 +129,8 @@ export default function CreateAppointment({ onSuccess }) {
       setErrors(["Please choose a future date and time"]);
       return;
     }
-    setAppointmentDateTime(format(modalSelected, "yyyy-MM-dd'T'HH:mm:ss"));
+    const iso = modalSelected.toISOString();
+    setAppointmentDateTime(iso);
     setErrors([]);
     setIsPickerOpen(false);
   };
@@ -119,8 +149,13 @@ export default function CreateAppointment({ onSuccess }) {
     <div className="auth-card">
       <h3>Create Appointment 🐶</h3>
       <p className="loyalty-discount-note" dir="ltr">
-        Loyalty pricing (10% off from your fourth booking onward) is calculated automatically
-        when you submit — see <strong>My Appointments</strong> for the stored price.
+        First three saved appointments are full list price; from your <strong>fourth</strong> saved appointment
+        onward you get <strong>10% off</strong> that size’s list price (fifth, sixth, … as well). If you cancel
+        until you have fewer than four in total, all remaining ones return to full price. Order is by
+        <strong> scheduled date and time</strong> (earliest first). Final price is set when you submit — see{" "}
+        <strong>My Appointments</strong>. Only{" "}
+        <strong>one</strong> appointment per exact date and time for the whole salon; if that slot is taken, choose
+        another time. <strong>Busy times are hidden</strong> in the calendar.
       </p>
 
       {errors.length > 0 && (
@@ -189,6 +224,9 @@ export default function CreateAppointment({ onSuccess }) {
         >
           <div className="modal modal--datepicker appointment-modal">
             <h3 id="appointment-picker-title">Choose date and time</h3>
+            <p className="picker-hint" dir="rtl" style={{ fontSize: "0.85rem", color: "#555", marginTop: 0 }}>
+              אפשר לבחור כל שעה פנויה בעתיד.
+            </p>
 
             <div className="appointment-datepicker-wrap">
               <DatePicker
@@ -201,7 +239,7 @@ export default function CreateAppointment({ onSuccess }) {
                 dateFormat="Pp"
                 locale="enUS"
                 minDate={new Date()}
-                filterTime={filterPassedTime}
+                filterTime={filterTime}
                 calendarClassName="appointment-calendar-inner"
               />
             </div>

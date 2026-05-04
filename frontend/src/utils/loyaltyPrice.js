@@ -7,7 +7,8 @@ export const BASE_PRICE_BY_SIZE = {
 
 /** JSON ids must normalize — JS Map distinguishes 12 from "12". */
 export function appointmentNumericId(appointment) {
-  const n = Number(appointment?.id);
+  const raw = appointment?.id ?? appointment?.Id;
+  const n = Number(raw);
   return Number.isFinite(n) ? n : null;
 }
 
@@ -17,7 +18,7 @@ export function basePriceForDogSize(dogSize) {
   return BASE_PRICE_BY_SIZE[key] ?? null;
 }
 
-/** UI: always show full catalog price when size is known; otherwise fall back to stored. */
+/** List price from dog size when known; otherwise stored price from API. */
 export function displayCatalogListPrice(appointment) {
   const base = basePriceForDogSize(appointment?.dogSize);
   if (base != null) return base;
@@ -25,11 +26,21 @@ export function displayCatalogListPrice(appointment) {
   return Number.isFinite(stored) ? stored : "—";
 }
 
-/** 0-based slot by ascending id (same as server): indices 0–2 full price; 3 = fourth booking = first with 10% off. */
+/** 0-based slot by ascending appointment date, then id (same as server): indices 0–2 full price; 3+ = 10% off list. */
 export const FIRST_LOYALTY_SLOT_INDEX = 3;
 
-/** Fewer than this many total bookings → no loyalty UI when slot index is unknown (stale DB guard). */
 const MIN_TOTAL_APPOINTMENTS_FOR_LOYALTY = 4;
+
+/** If stored price matches 10% off any catalog tier, return that tier’s list price (else null). */
+function catalogListPriceIfStoredLooksLikeLoyaltyDiscount(appointment) {
+  const stored = Number(appointment?.price);
+  if (!Number.isFinite(stored)) return null;
+  for (const catalog of Object.values(BASE_PRICE_BY_SIZE)) {
+    const discounted = Math.round(catalog * 0.9 * 100) / 100;
+    if (Math.abs(stored - discounted) < 0.03) return catalog;
+  }
+  return null;
+}
 
 /** True when DB charge is the 10%-off catalog price for this dog size. */
 export function hasLoyaltyTenPercentCharge(appointment) {
@@ -52,15 +63,13 @@ export function loyaltySlotDiscountedCatalogPrice(appointment) {
 
 /**
  * @param {object} [ctx]
- * @param {boolean} [ctx.isMine] — logged-in user owns this row
- * @param {number|undefined} [ctx.mineSlotIndex] — 0-based index in getAll() sorted by id (authoritative for “my” rows)
- * @param {number|undefined} [ctx.mineTotalAppointments] — total count from getAll(); used when slot unknown
+ * @param {boolean} [ctx.isMine]
+ * @param {number|undefined} [ctx.mineSlotIndex]
+ * @param {number|undefined} [ctx.mineTotalAppointments]
  */
 export function loyaltyUiApplies(appointment, ctx = {}) {
   const { isMine, mineSlotIndex, mineTotalAppointments } = ctx;
-  if (isMine === true && typeof mineSlotIndex === "number") {
-    return mineSlotIndex >= FIRST_LOYALTY_SLOT_INDEX;
-  }
+
   if (
     isMine === true &&
     typeof mineTotalAppointments === "number" &&
@@ -68,12 +77,32 @@ export function loyaltyUiApplies(appointment, ctx = {}) {
   ) {
     return false;
   }
+
+  if (isMine === true && typeof mineSlotIndex === "number") {
+    return mineSlotIndex >= FIRST_LOYALTY_SLOT_INDEX;
+  }
+
+  if (isMine === true) {
+    return false;
+  }
+
   return hasLoyaltyTenPercentCharge(appointment);
 }
 
-/** Main “Price” line: amount due when loyalty applies; otherwise catalog (or stored if size unknown). */
+/** Amount due: catalog or 10% off when loyalty slot applies. */
 export function cardPrincipalPrice(appointment, ctx = {}) {
-  const { isMine, mineSlotIndex } = ctx;
+  const { isMine, mineSlotIndex, mineTotalAppointments } = ctx;
+  if (
+    isMine === true &&
+    typeof mineTotalAppointments === "number" &&
+    mineTotalAppointments < MIN_TOTAL_APPOINTMENTS_FOR_LOYALTY
+  ) {
+    const base = basePriceForDogSize(appointment?.dogSize);
+    if (base != null) return base;
+    const fromStoredGuess = catalogListPriceIfStoredLooksLikeLoyaltyDiscount(appointment);
+    if (fromStoredGuess != null) return fromStoredGuess;
+    return displayCatalogListPrice(appointment);
+  }
   if (isMine === true && typeof mineSlotIndex === "number") {
     return mineSlotIndex < FIRST_LOYALTY_SLOT_INDEX
       ? displayCatalogListPrice(appointment)
