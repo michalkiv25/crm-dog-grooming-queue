@@ -13,8 +13,6 @@ namespace DogQueue.WebApi.Managers;
 /// </summary>
 public class AppointmentsManager : IAppointmentsManager
 {
-    private const string SqlServerProvider = "Microsoft.EntityFrameworkCore.SqlServer";
-
     /// <summary>
     /// First three saved rows per user (by ascending scheduled <c>Date</c>, then <c>Id</c>) pay list price; fourth and later get 10% off list
     /// for that size. If the customer deletes until fewer than four remain, all remaining rows are repriced to full list.
@@ -247,22 +245,6 @@ public class AppointmentsManager : IAppointmentsManager
 
     private bool IsAppointmentSlotTaken(DateTime slot, int? excludeAppointmentId = null)
     {
-        // Procedure can short-circuit to "taken" only. If it says free (0), null, or errors, we must still
-        // verify with EF — otherwise a bad proc/mapping row with Taken=0 skipped the Linq check entirely.
-        if (_appointments.DatabaseProviderName == SqlServerProvider)
-        {
-            try
-            {
-                var row = _appointments.ExecSlotTakenProcedure(slot, excludeAppointmentId);
-                if (row is { Taken: not 0 })
-                    return true;
-            }
-            catch
-            {
-                // fall through to Linq
-            }
-        }
-
         return _appointments.SlotTakenByLinq(slot, excludeAppointmentId);
     }
 

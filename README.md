@@ -116,7 +116,7 @@ Frontend runs on: `http://localhost:5173` (or next available port)
 - Startup runs **`Migrate()`** then creates the VIEW + procedures via `SqlServerRoutineInstaller`.
 
 ### Stored procedures
-- **`dbo.sp_AppointmentSlotTaken`** — slot conflict check. Created at startup by `SqlServerRoutineInstaller`.
+- **`dbo.sp_GetUserLoyaltyPreview @Username`** — returns `AppointmentCount` and `NextBookingDiscountPercent` (0 or 10). Created at startup by `SqlServerRoutineInstaller`.
 
 ### Views
 - **`vw_AppointmentsWithUsers`** — appointments `INNER JOIN` users (`FullName`). Created at startup by `SqlServerRoutineInstaller`. Read via **`GET /api/appointments/upcoming-with-user-info`** (`AppointmentWithUserView`).

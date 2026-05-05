@@ -1,6 +1,5 @@
 using DogQueue.WebApi.Interfaces.Repositories;
 using DogQueue.WebApi.Models;
-using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace DogQueue.WebApi.Data.Repositories;
@@ -70,21 +69,6 @@ public class AppointmentRepository : IAppointmentRepository
             .ExecuteUpdate(setters => setters
                 .SetProperty(a => a.Price, price)
                 .SetProperty(a => a.DurationMinutes, durationMinutes));
-    }
-
-    public SlotTakenProcRow? ExecSlotTakenProcedure(DateTime slot, int? excludeAppointmentId)
-    {
-        return _db.Database
-            .SqlQueryRaw<SlotTakenProcRow>(
-                "EXEC dbo.sp_AppointmentSlotTaken @Year, @Month, @Day, @Hour, @Minute, @ExcludeAppointmentId",
-                new SqlParameter("@Year", slot.Year),
-                new SqlParameter("@Month", slot.Month),
-                new SqlParameter("@Day", slot.Day),
-                new SqlParameter("@Hour", slot.Hour),
-                new SqlParameter("@Minute", slot.Minute),
-                new SqlParameter("@ExcludeAppointmentId", (object?)excludeAppointmentId ?? DBNull.Value))
-            .AsEnumerable()
-            .FirstOrDefault();
     }
 
     public bool SlotTakenByLinq(DateTime slot, int? excludeAppointmentId)

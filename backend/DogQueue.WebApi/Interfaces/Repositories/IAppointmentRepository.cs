@@ -33,7 +33,5 @@ public interface IAppointmentRepository
 
     void ExecuteUpdatePriceAndDuration(int appointmentId, decimal price, int durationMinutes);
 
-    SlotTakenProcRow? ExecSlotTakenProcedure(DateTime slot, int? excludeAppointmentId);
-
     bool SlotTakenByLinq(DateTime slot, int? excludeAppointmentId);
 }
