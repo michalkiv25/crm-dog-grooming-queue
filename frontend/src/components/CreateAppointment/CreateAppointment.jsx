@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState } from "react";
 import DatePicker, { registerLocale } from "react-datepicker";
 import { enUS } from "date-fns/locale/en-US";
 import "react-datepicker/dist/react-datepicker.css";
@@ -6,13 +6,6 @@ import { appointmentsService } from "../../services/api";
 import { sanitizeDogNameInput } from "../../utils/inputSanitize";
 
 registerLocale("enUS", enUS);
-
-/** Local calendar minute key — must match <code>filterTime</code>’s <code>Date</code> (browser local). */
-function localMinuteKey(d) {
-  const x = d instanceof Date ? d : new Date(d);
-  if (Number.isNaN(x.getTime())) return "";
-  return `${x.getFullYear()}-${x.getMonth()}-${x.getDate()}-${x.getHours()}-${x.getMinutes()}`;
-}
 
 export default function CreateAppointment({ onSuccess }) {
   const [dogName, setDogName] = useState("");
@@ -22,26 +15,6 @@ export default function CreateAppointment({ onSuccess }) {
   const [modalSelected, setModalSelected] = useState(null);
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(false);
-  /** Set of <see cref="localMinuteKey"/> for occupied salon slots */
-  const [occupiedLocalKeys, setOccupiedLocalKeys] = useState(() => new Set());
-
-  const loadOccupiedSlots = useCallback(async () => {
-    const res = await appointmentsService.bookedSlotTimes();
-    if (!res.ok || !Array.isArray(res.data)) {
-      setOccupiedLocalKeys(new Set());
-      return;
-    }
-    const next = new Set();
-    for (const iso of res.data) {
-      next.add(localMinuteKey(new Date(iso)));
-    }
-    setOccupiedLocalKeys(next);
-  }, []);
-
-  useEffect(() => {
-    if (isPickerOpen) loadOccupiedSlots();
-  }, [isPickerOpen, loadOccupiedSlots]);
-
   const validateInput = () => {
     const newErrors = [];
 
@@ -89,13 +62,11 @@ export default function CreateAppointment({ onSuccess }) {
         setAppointmentDateTime("");
         setModalSelected(null);
         setErrors([]);
-        await loadOccupiedSlots();
         onSuccess?.();
       } else {
         const raw = data?.errors?.[0] ?? data?.message ?? "";
         const errorMessage = raw || "Failed to create appointment ❌";
         setErrors([errorMessage]);
-        await loadOccupiedSlots();
       }
     } catch (err) {
       setErrors(["Network error. Please try again."]);

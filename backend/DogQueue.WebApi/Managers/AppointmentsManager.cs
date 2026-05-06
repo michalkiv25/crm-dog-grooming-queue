@@ -1,4 +1,3 @@
-using System.Globalization;
 using DogQueue.WebApi.Infrastructure;
 using DogQueue.WebApi.Interfaces.Managers;
 using DogQueue.WebApi.Interfaces.Repositories;
@@ -167,8 +166,6 @@ public class AppointmentsManager : IAppointmentsManager
             return ServiceResult<object?>.Forbid();
         }
 
-        // Intentionally no check on appointment.Date vs "today" — customers may cancel same-day bookings.
-
         var owner = appointment.Username;
         _appointments.Remove(appointment);
         _appointments.SaveChanges();
@@ -219,33 +216,6 @@ public class AppointmentsManager : IAppointmentsManager
         return ServiceResult<List<AppointmentWithUserView>>.Ok(list);
     }
 
-    public ServiceResult<List<string>> GetBookedSlotIsoTimes()
-    {
-        var raw = _appointments.ListAllAppointmentStartTimes();
-        var seen = new HashSet<long>();
-        var list = new List<string>();
-        foreach (var d in raw)
-        {
-            var t = TruncateToMinute(d);
-            if (!seen.Add(t.Ticks)) continue;
-            list.Add(t.ToString("o", CultureInfo.InvariantCulture));
-        }
-        list.Sort(StringComparer.Ordinal);
-        return ServiceResult<List<string>>.Ok(list);
-    }
-
-    public bool IsSlotTaken(DateTime slot, int? excludeAppointmentId = null)
-    {
-        slot = TruncateToMinute(slot);
-        return IsAppointmentSlotTaken(slot, excludeAppointmentId);
-    }
-
     private static DateTime TruncateToMinute(DateTime dt) =>
         new DateTime(dt.Year, dt.Month, dt.Day, dt.Hour, dt.Minute, 0, dt.Kind);
-
-    private bool IsAppointmentSlotTaken(DateTime slot, int? excludeAppointmentId = null)
-    {
-        return _appointments.SlotTakenByLinq(slot, excludeAppointmentId);
-    }
-
 }

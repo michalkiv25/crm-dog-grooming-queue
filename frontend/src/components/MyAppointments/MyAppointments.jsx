@@ -239,7 +239,7 @@ export default function MyAppointments({ refreshTrigger }) {
     }
     const appt = appointmentById(nid);
     if (appt && isPastTodaySlot(appt.date) && isMine(appt)) {
-      alert("אי אפשר לערוך או למחוק תור שעברה שעתו באותו יום.");
+      alert("You can't edit or delete an appointment whose time has already passed on the same day.");
       return;
     }
     const { ok, data, status } = await appointmentsService.delete(nid);

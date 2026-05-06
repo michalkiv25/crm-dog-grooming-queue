@@ -42,9 +42,6 @@ public class AppointmentRepository : IAppointmentRepository
             .ThenBy(a => a.Id)
             .ToList();
 
-    public List<DateTime> ListAllAppointmentStartTimes() =>
-        _db.Appointments.AsNoTracking().Select(a => a.Date).ToList();
-
     public List<AppointmentWithUserView> ListUpcomingWithUsers(DateTime now) =>
         _db.AppointmentWithUserViews
             .AsNoTracking()
@@ -69,19 +66,5 @@ public class AppointmentRepository : IAppointmentRepository
             .ExecuteUpdate(setters => setters
                 .SetProperty(a => a.Price, price)
                 .SetProperty(a => a.DurationMinutes, durationMinutes));
-    }
-
-    public bool SlotTakenByLinq(DateTime slot, int? excludeAppointmentId)
-    {
-        /** Align with unique index on calendar minute: any row whose instant falls in [start, start+1 minute). */
-        var start = new DateTime(slot.Year, slot.Month, slot.Day, slot.Hour, slot.Minute, 0, slot.Kind);
-        var end = start.AddMinutes(1);
-
-        var query = _db.Appointments.AsNoTracking().Where(a => a.Date >= start && a.Date < end);
-
-        if (excludeAppointmentId.HasValue)
-            query = query.Where(a => a.Id != excludeAppointmentId.Value);
-
-        return query.Any();
     }
 }

@@ -1,6 +1,5 @@
 using DogQueue.WebApi.Interfaces.Managers;
 using DogQueue.WebApi.Models;
-using DogQueue.WebApi.Models.Auth;
 using Microsoft.AspNetCore.Mvc;
 
 namespace DogQueue.WebApi.Controllers;
@@ -30,24 +29,7 @@ public class AuthController : ControllerBase
         return ToActionResult(result);
     }
 
-    private IActionResult ToActionResult(ServiceResult<object?> result)
-    {
-        object payload = result.Errors?.Length > 0
-            ? new { message = result.Message, errors = result.Errors }
-            : result.Data ?? new { message = result.Message };
-
-        return result.StatusCode switch
-        {
-            200 => Ok(payload),
-            400 => BadRequest(payload),
-            401 => Unauthorized(payload),
-            403 => StatusCode(403, payload),
-            404 => NotFound(payload),
-            _ => StatusCode(result.StatusCode, payload)
-        };
-    }
-
-    private IActionResult ToActionResult(ServiceResult<LoginResponse> result)
+    private IActionResult ToActionResult<T>(ServiceResult<T> result)
     {
         object payload = result.Errors?.Length > 0
             ? new { message = result.Message, errors = result.Errors }

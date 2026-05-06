@@ -16,10 +16,4 @@ public interface IAppointmentsManager
     ServiceResult<List<Appointment>> GetSalonAppointments();
 
     ServiceResult<List<AppointmentWithUserView>> GetUpcomingAppointmentsWithUserInfo();
-
-    /// <summary>Whether the salon minute-slot is already taken (same instant bucket as unique index).</summary>
-    bool IsSlotTaken(DateTime slot, int? excludeAppointmentId = null);
-
-    /// <summary>Round-trip ISO instants (minute-precision) for every existing booking — used to grey out times in the picker.</summary>
-    ServiceResult<List<string>> GetBookedSlotIsoTimes();
 }

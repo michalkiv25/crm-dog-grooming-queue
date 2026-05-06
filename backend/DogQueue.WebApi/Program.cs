@@ -32,11 +32,11 @@ var defaultConnection = builder.Configuration.GetConnectionString("DefaultConnec
 var useSqliteFallback = string.IsNullOrWhiteSpace(defaultConnection);
 
 if (!useSqliteFallback &&
-    OperatingSystem.IsLinux() &&
+    (OperatingSystem.IsLinux() || OperatingSystem.IsMacOS()) &&
     defaultConnection?.Contains("localdb", StringComparison.OrdinalIgnoreCase) == true)
 {
     Console.WriteLine(
-        "ConnectionStrings__DefaultConnection points at LocalDB on Linux. Falling back to SQLite (Data Source=dogqueue.db).");
+        "ConnectionStrings__DefaultConnection points at LocalDB on Linux/Mac. Falling back to SQLite (Data Source=dogqueue.db).");
     useSqliteFallback = true;
 }
 

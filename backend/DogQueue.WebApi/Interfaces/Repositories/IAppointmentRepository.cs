@@ -23,15 +23,10 @@ public interface IAppointmentRepository
     /// <summary>Every saved appointment (all customers), ordered by date.</summary>
     List<Appointment> ListAllOrderByDate();
 
-    /// <summary>Start <c>Date</c> of every row (for busy-slot UI).</summary>
-    List<DateTime> ListAllAppointmentStartTimes();
-
     List<AppointmentWithUserView> ListUpcomingWithUsers(DateTime now);
 
     /// <summary>Loyalty repricing: ascending scheduled <c>Date</c>, then <c>Id</c> for ties.</summary>
     List<Appointment> ListOrderedByDateThenIdNoTrackingForUser(string canonicalUsername);
 
     void ExecuteUpdatePriceAndDuration(int appointmentId, decimal price, int durationMinutes);
-
-    bool SlotTakenByLinq(DateTime slot, int? excludeAppointmentId);
 }

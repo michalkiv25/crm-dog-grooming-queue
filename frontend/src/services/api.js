@@ -105,20 +105,6 @@ export const appointmentsService = {
     return apiCall("/appointments/all-appointments");
   },
 
-  /** Salon-wide free/busy for one calendar minute — pass <code>date.toISOString()</code> so server matches POST body. */
-  async checkSlot(isoDateTime, excludeId) {
-    const params = new URLSearchParams({ at: isoDateTime });
-    if (excludeId != null && excludeId !== undefined) {
-      params.set("excludeId", String(excludeId));
-    }
-    return apiCall(`/appointments/check-slot?${params.toString()}`);
-  },
-
-  /** ISO start times (minute buckets) for every booking — drive disabled times in the picker. */
-  async bookedSlotTimes() {
-    return apiCall("/appointments/booked-slot-times");
-  },
-
   async create(dogName, dogSize, date) {
     return apiCall("/appointments", {
       method: "POST",
