@@ -86,37 +86,6 @@ button:hover {
   background: var(--dark-brown);
 }
 
-.logout-container {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 20px;
-  padding: 10px 0;
-  border-bottom: 2px solid var(--tan);
-}
-
-.logout-greeting {
-  margin: 0;
-  font-weight: bold;
-  color: var(--dark-brown);
-  text-align: right;
-}
-
-.logout-button {
-  background: var(--light-brown);
-  color: var(--light-text);
-  border: none;
-  padding: 8px 16px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.logout-button:hover {
-  background: var(--dark-brown);
-}
-
 .appointments-dashboard {
   display: flex;
   flex-direction: column;
@@ -211,17 +180,6 @@ button:hover {
   color: var(--dark-brown);
 }
 
-.loyalty-discount-note {
-  margin: 0 0 18px 0;
-  font-size: 0.92rem;
-  line-height: 1.5;
-  color: var(--dark-text);
-  padding: 12px 14px;
-  background: rgba(255, 255, 255, 0.55);
-  border-radius: 10px;
-  border: 1px solid var(--tan);
-}
-
 .auth-card label {
   display: block;
   margin-bottom: 22px;
@@ -245,10 +203,6 @@ button:hover {
   border-radius: 8px;
   background: var(--light-text);
   color: var(--dark-text);
-}
-
-.date-time-trigger {
-  cursor: pointer;
 }
 
 .primary-button {
@@ -426,115 +380,4 @@ button:hover {
   justify-content: flex-end;
   gap: 10px;
   margin-top: 20px;
-}
-
-.modal.modal--datepicker {
-  max-width: min(100%, 380px);
-}
-
-.appointment-modal h3 {
-  margin-top: 0;
-  text-align: center;
-  color: var(--dark-brown);
-}
-
-.appointment-datepicker-wrap {
-  display: flex;
-  justify-content: center;
-  margin: 8px 0 4px;
-}
-
-.appointment-modal .react-datepicker {
-  font-family: Arial, sans-serif;
-  border: 2px solid var(--tan);
-  border-radius: 12px;
-  background: var(--beige);
-}
-
-.appointment-modal .react-datepicker__header {
-  background: var(--cream);
-  border-bottom: 2px solid var(--tan);
-  border-radius: 10px 10px 0 0;
-}
-
-.appointment-modal .react-datepicker__current-month,
-.appointment-modal .react-datepicker-time__header {
-  color: var(--dark-brown);
-}
-
-.appointment-modal .react-datepicker__day-name,
-.appointment-modal .react-datepicker__day {
-  color: var(--dark-text);
-}
-
-.appointment-modal .react-datepicker__day:hover {
-  background: var(--tan);
-}
-
-.appointment-modal .react-datepicker__day--selected,
-.appointment-modal .react-datepicker__day--keyboard-selected {
-  background: var(--primary-brown) !important;
-  color: var(--light-text) !important;
-}
-
-.appointment-modal .react-datepicker__day--disabled {
-  color: #aaa;
-}
-
-.appointment-modal .react-datepicker__navigation-icon::before {
-  border-color: var(--dark-brown);
-}
-
-.appointment-modal .react-datepicker__time-container {
-  border-left: 2px solid var(--tan);
-  width: 6rem;
-}
-
-.appointment-modal .react-datepicker__time-list-item--selected {
-  background: var(--primary-brown) !important;
-  color: var(--light-text) !important;
-}
-
-.appointment-modal .react-datepicker__time-list-item:hover {
-  background: var(--tan) !important;
-}
-
-.not-found-page {
-  display: grid;
-  place-items: center;
-  min-height: 50vh;
-}
-
-.not-found-card {
-  width: min(100%, 760px);
-  text-align: center;
-  background: #ffffff;
-  border: 2px solid var(--tan);
-  border-radius: 24px;
-  padding: 56px;
-  box-shadow: 0 10px 30px rgba(139, 69, 19, 0.15);
-}
-
-.not-found-inner {
-  background: linear-gradient(135deg, var(--primary-brown) 0%, var(--light-brown) 100%);
-  border-radius: 24px;
-  padding: 44px 36px;
-  box-shadow: 0 12px 26px rgba(101, 67, 33, 0.25);
-}
-
-.not-found-card h1 {
-  margin: 0;
-  font-size: 3rem;
-  color: var(--light-text);
-}
-
-.not-found-card p {
-  margin: 12px 0 20px;
-  color: rgba(255, 255, 255, 0.92);
-}
-
-.not-found-link {
-  display: inline-block;
-  width: auto;
-  text-decoration: none;
 }

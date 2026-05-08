@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { authService } from "../../services/api";
+import { validateLoginInput } from "../../utils/formValidation";
+import "./Login.css";
 
 export default function Login({
   onLogin,
@@ -19,16 +21,7 @@ export default function Login({
   }, [defaultUsername]);
 
   const validateInput = () => {
-    const newErrors = [];
-    
-    if (!username.trim()) {
-      newErrors.push("Username is required");
-    }
-    
-    if (!password.trim()) {
-      newErrors.push("Password is required");
-    }
-    
+    const newErrors = validateLoginInput({ username, password });
     setErrors(newErrors);
     return newErrors.length === 0;
   };

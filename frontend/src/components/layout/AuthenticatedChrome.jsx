@@ -1,3 +1,5 @@
+import "./AuthenticatedChrome.css";
+
 export default function AuthenticatedChrome({ onLogout, children }) {
   return (
     <>

@@ -1,0 +1,30 @@
+.logout-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding: 10px 0;
+  border-bottom: 2px solid var(--tan);
+}
+
+.logout-greeting {
+  margin: 0;
+  font-weight: bold;
+  color: var(--dark-brown);
+  text-align: right;
+}
+
+.logout-button {
+  background: var(--light-brown);
+  color: var(--light-text);
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.logout-button:hover {
+  background: var(--dark-brown);
+}

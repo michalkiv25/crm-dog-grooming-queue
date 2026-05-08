@@ -4,6 +4,9 @@ import { enUS } from "date-fns/locale/en-US";
 import "react-datepicker/dist/react-datepicker.css";
 import { appointmentsService } from "../../services/api";
 import { sanitizeDogNameInput } from "../../utils/inputSanitize";
+import { validateAppointmentInput } from "../../utils/formValidation";
+import { toLocalIsoWithoutZone } from "../../utils/dateTime";
+import "./CreateAppointment.css";
 
 registerLocale("enUS", enUS);
 
@@ -16,30 +19,11 @@ export default function CreateAppointment({ onSuccess }) {
   const [errors, setErrors] = useState([]);
   const [loading, setLoading] = useState(false);
   const validateInput = () => {
-    const newErrors = [];
-
-    if (!dogName.trim()) {
-      newErrors.push("Dog name is required");
-    } else if (dogName.trim().length < 2) {
-      newErrors.push("Dog name must be at least 2 characters");
-    } else if (dogName.trim().length > 50) {
-      newErrors.push("Dog name must not exceed 50 characters");
-    } else if (!/^[\p{L}\s'\-]+$/u.test(dogName.trim())) {
-      newErrors.push("Dog name must contain letters only");
-    }
-
-    if (!dogSize) {
-      newErrors.push("Dog size is required");
-    } else if (!["small", "medium", "large"].includes(dogSize)) {
-      newErrors.push("Invalid dog size selected");
-    }
-
-    if (!appointmentDateTime) {
-      newErrors.push("Appointment date is required");
-    } else if (new Date(appointmentDateTime) <= new Date()) {
-      newErrors.push("Appointment date must be in the future");
-    }
-
+    const newErrors = validateAppointmentInput({
+      dogName,
+      dogSize,
+      date: appointmentDateTime,
+    });
     setErrors(newErrors);
     return newErrors.length === 0;
   };
@@ -100,8 +84,8 @@ export default function CreateAppointment({ onSuccess }) {
       setErrors(["Please choose a future date and time"]);
       return;
     }
-    const iso = modalSelected.toISOString();
-    setAppointmentDateTime(iso);
+    const localIso = toLocalIsoWithoutZone(modalSelected);
+    setAppointmentDateTime(localIso);
     setErrors([]);
     setIsPickerOpen(false);
   };

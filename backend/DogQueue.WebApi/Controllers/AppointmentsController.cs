@@ -22,6 +22,7 @@ public class AppointmentsController : ControllerBase
         _currentUserProvider = currentUserProvider;
     }
 
+    /// <summary>All customers’ appointments (past and future).</summary>
     [Authorize]
     [HttpGet]
     public IActionResult GetAll()
@@ -34,6 +35,7 @@ public class AppointmentsController : ControllerBase
         return ToActionResult(result);
     }
 
+    /// <summary>All customers’ future appointments (salon queue).</summary>
     [Authorize]
     [HttpGet("upcoming-queue")]
     public IActionResult GetUpcomingQueue()
@@ -46,7 +48,7 @@ public class AppointmentsController : ControllerBase
         return ToActionResult(result);
     }
 
-    /// <summary>Full salon list: every customer’s appointments (read-only for others; edit/delete via ownership checks).</summary>
+    /// <summary>Every customer’s appointments (past and future) (full salon board).</summary>
     [Authorize]
     [HttpGet("all-appointments")]
     public IActionResult GetAllSalonAppointments()

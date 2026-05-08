@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { authService } from "../../services/api";
+import { validateRegisterInput } from "../../utils/formValidation";
+import "./Register.css";
 
 /** Username: Unicode letters only (no digits or punctuation). */
 const sanitizeUsernameLettersOnly = (value) =>
@@ -17,34 +19,7 @@ export default function Register({ onSwitchToLogin }) {
   const [loading, setLoading] = useState(false);
 
   const validateInput = () => {
-    const newErrors = [];
-
-    if (!username.trim()) {
-      newErrors.push("Username is required");
-    } else if (username.trim().length < 3) {
-      newErrors.push("Username must be at least 3 characters");
-    } else if (username.trim().length > 30) {
-      newErrors.push("Username must not exceed 30 characters");
-    } else if (!/^[\p{L}]+$/u.test(username.trim())) {
-      newErrors.push("Username must contain letters only");
-    }
-
-    if (!password.trim()) {
-      newErrors.push("Password is required");
-    } else if (password.trim().length < 6) {
-      newErrors.push("Password must be at least 6 characters");
-    }
-
-    if (!fullName.trim()) {
-      newErrors.push("Full name is required");
-    } else if (fullName.trim().length < 2) {
-      newErrors.push("Full name must be at least 2 characters");
-    } else if (fullName.trim().length > 100) {
-      newErrors.push("Full name must not exceed 100 characters");
-    } else if (!/^[\p{L}\s'\-]+$/u.test(fullName.trim())) {
-      newErrors.push("Full name must contain letters, spaces, hyphen or apostrophe only");
-    }
-
+    const newErrors = validateRegisterInput({ username, password, fullName });
     setErrors(newErrors);
     return newErrors.length === 0;
   };

@@ -2,6 +2,12 @@ import { useState, useEffect } from "react";
 import { appointmentsService } from "../../services/api";
 import { sanitizeDogNameInput } from "../../utils/inputSanitize";
 import { appointmentNumericId } from "../../utils/loyaltyPrice";
+import {
+  sameBookingSlot,
+  validateAppointmentInput,
+} from "../../utils/formValidation";
+import { withSeconds } from "../../utils/dateTime";
+import "./EditAppointment.css";
 
 /** `datetime-local` value for the same instant as an API ISO string (local wall time). */
 function isoToDatetimeLocalValue(isoOrLocal) {
@@ -10,15 +16,6 @@ function isoToDatetimeLocalValue(isoOrLocal) {
   if (Number.isNaN(d.getTime())) return "";
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
-/** Same slot as stored row if wall times differ by less than ~6 minutes (datetime-local vs ISO skew). */
-function sameBookingSlot(isoOrLocalA, isoOrLocalB) {
-  if (isoOrLocalA == null || isoOrLocalB == null) return false;
-  const ta = new Date(isoOrLocalA).getTime();
-  const tb = new Date(isoOrLocalB).getTime();
-  if (!Number.isFinite(ta) || !Number.isFinite(tb)) return false;
-  return Math.abs(ta - tb) < 6 * 60 * 1000;
 }
 
 export default function EditAppointment({ appointment, onSave, onCancel }) {
@@ -35,33 +32,12 @@ export default function EditAppointment({ appointment, onSave, onCancel }) {
   }, [appointment]);
 
   const validateInput = () => {
-    const newErrors = [];
-
-    if (!dogName.trim()) {
-      newErrors.push("Dog name is required");
-    } else if (dogName.trim().length < 2) {
-      newErrors.push("Dog name must be at least 2 characters");
-    } else if (dogName.trim().length > 50) {
-      newErrors.push("Dog name must not exceed 50 characters");
-    } else if (!/^[\p{L}\s'\-]+$/u.test(dogName.trim())) {
-      newErrors.push("Dog name must contain letters only");
-    }
-
-    if (!dogSize) {
-      newErrors.push("Dog size is required");
-    } else if (!["small", "medium", "large"].includes(dogSize)) {
-      newErrors.push("Invalid dog size selected");
-    }
-
-    if (!date) {
-      newErrors.push("Appointment date is required");
-    } else if (
-      !sameBookingSlot(date, appointment.date) &&
-      new Date(date) <= new Date()
-    ) {
-      newErrors.push("Appointment date must be in the future");
-    }
-
+    const newErrors = validateAppointmentInput({
+      dogName,
+      dogSize,
+      date,
+      originalDate: appointment.date,
+    });
     setErrors(newErrors);
     return newErrors.length === 0;
   };
@@ -71,7 +47,7 @@ export default function EditAppointment({ appointment, onSave, onCancel }) {
     setLoading(true);
 
     try {
-      const dateIso = new Date(date).toISOString();
+      const dateIso = withSeconds(date);
       const id = appointmentNumericId(appointment);
       if (id == null) {
         setErrors(["Invalid appointment id."]);
